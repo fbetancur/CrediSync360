@@ -8,15 +8,16 @@
 
 ## 📊 Estado General del Proyecto
 
-### Fase Actual: Implementación - Fase 5 ✅
+### Fase Actual: Implementación - Fase 6 🔄
 - ✅ Fase 1: Setup y Configuración (COMPLETA)
 - ✅ Fase 2: Base de Datos Local (COMPLETA)
 - ✅ Fase 3: Sync Manager (COMPLETA)
 - ✅ Fase 4: Pantalla Principal - Ruta del Día (COMPLETA)
 - ✅ Fase 5: Registro de Pagos (COMPLETA) 🎉
-  - ✅ Tarea 10: Hook useCobro implementado
-  - ✅ Tarea 11: Modal RegistrarPago implementado
-  - ⏳ Tarea 12: Checkpoint - Probar flujo completo (AHORA)
+- 🔄 Fase 6: Gestión de Clientes (EN PROGRESO)
+  - ✅ Tarea 13: Hook useClientes implementado
+  - ✅ Tarea 14: Pantalla ClientesList implementada
+  - ⏳ Tarea 15: Pantalla ClienteDetail (SIGUIENTE)
 
 ---
 
@@ -48,6 +49,66 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 ---
 
 ## 📝 Registro de Actividades
+
+### 2025-12-05 - Sesión 8: Implementación Fase 6 - Gestión de Clientes (Parte 1)
+
+#### Actividades Realizadas:
+1. ✅ Tarea 13: Implementar hook useClientes
+   - ✅ Hook useClientes ya existía (170 líneas)
+   - ✅ Carga todos los clientes del tenant
+   - ✅ Búsqueda en tiempo real (nombre, documento, teléfono)
+   - ✅ Calcula estado de cada cliente (MORA, AL_DIA, SIN_CREDITOS)
+   - ✅ Filtra clientes según query de búsqueda
+
+2. ✅ Tarea 14: Implementar componente ClientesList
+   - ✅ Creado src/components/clientes/ClientesList.tsx (140 líneas)
+   - ✅ Input de búsqueda en la parte superior
+   - ✅ Contador de resultados
+   - ✅ Botón "Nuevo Cliente" (placeholder)
+   - ✅ Lista de clientes con scroll
+   - ✅ Estados: loading, error, empty
+
+3. ✅ Tarea 14.2: Crear ClienteCard
+   - ✅ Creado src/components/clientes/ClienteCard.tsx (120 líneas)
+   - ✅ Muestra nombre, documento, teléfono
+   - ✅ Indicador de estado con colores (rojo=mora, verde=al día, gris=sin créditos)
+   - ✅ Muestra saldo pendiente y créditos activos
+   - ✅ Muestra días de atraso si está en mora
+
+4. ✅ Navegación entre pantallas
+   - ✅ Actualizado App.tsx con navegación simple
+   - ✅ Tabs para Cobros y Clientes
+   - ✅ Ajustados componentes para altura flexible
+
+#### Logros de Sesión 8:
+- **3 archivos nuevos:** ClientesList.tsx, ClienteCard.tsx, index.ts
+- **Navegación funcional:** Entre Cobros y Clientes
+- **Búsqueda en tiempo real:** Filtra por nombre, documento o teléfono
+- **Tests:** 21/21 pasando (100%)
+
+#### Estado del Proyecto:
+- **Fase 6 EN PROGRESO:** 🔄 Gestión de Clientes
+  - Hook useClientes funcionando
+  - Pantalla ClientesList completa
+  - Búsqueda en tiempo real
+  - Navegación entre pantallas
+  - Pendiente: ClienteDetail
+
+#### Logros Técnicos:
+- **Requirements validados:** 3.1 - 3.5 (100%)
+- **Búsqueda:** Filtra por nombre, documento y teléfono
+- **Estados visuales:** Colores según estado del cliente
+- **Performance:** Búsqueda instantánea sin debounce
+- **Tests:** 21/21 pasando
+
+#### Próximos Pasos:
+1. **SIGUIENTE:** Tarea 15 - Implementar ClienteDetail
+   - Mostrar información completa del cliente
+   - Mostrar historial de créditos
+   - Calcular y mostrar score
+   - Botón "Otorgar Nuevo Crédito"
+
+---
 
 ### 2025-12-05 - Sesión 7: Finalización Fase 5 y Checkpoint
 

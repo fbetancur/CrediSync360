@@ -122,7 +122,7 @@ export function RutaDelDia() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50">
       {/* Header: Resumen del Día */}
       <div className="bg-white shadow-sm border-b border-gray-200 p-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">

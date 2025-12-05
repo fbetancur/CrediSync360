@@ -220,8 +220,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 
 ## Fase 6: Gestión de Clientes
 
-### [ ] 13. Implementar hook useClientes
-- [ ] 13.1 Crear `src/hooks/useClientes.ts`
+### [x] 13. Implementar hook useClientes
+- [x] 13.1 Crear `src/hooks/useClientes.ts`
   - Cargar todos los clientes del tenant
   - Implementar búsqueda en tiempo real (nombre, doc, teléfono)
   - Calcular estado de cada cliente (mora, al día)
@@ -236,15 +236,15 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Verificar que todos los matches aparecen
   - _Requirements: 3.2_
 
-### [ ] 14. Implementar componente ClientesList
-- [ ] 14.1 Crear `src/components/clientes/ClientesList.tsx`
+### [x] 14. Implementar componente ClientesList
+- [x] 14.1 Crear `src/components/clientes/ClientesList.tsx`
   - Input de búsqueda en la parte superior
   - Lista virtualizada de clientes (react-window)
   - Botón "Nuevo Cliente"
   - Click en tarjeta navega a detalle
   - _Requirements: 3.1, 3.2, 3.6, 3.7, 3.8_
 
-- [ ] 14.2 Crear `src/components/clientes/ClienteCard.tsx`
+- [x] 14.2 Crear `src/components/clientes/ClienteCard.tsx`
   - Mostrar nombre, documento, teléfono
   - Indicador de estado (mora/al día)
   - Mostrar saldo pendiente y créditos activos
