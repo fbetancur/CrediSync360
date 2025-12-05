@@ -86,11 +86,26 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
    - **Archivos afectados:** amplify/data/resource.ts
    - **Estado:** ✅ Resuelto
 
+#### Estado del Deploy:
+- ✅ **Full deployment EXITOSO** (187.42 segundos)
+- ✅ Todos los errores de TypeScript resueltos
+- ✅ Schema validado correctamente
+- ✅ 6 tablas DynamoDB creadas
+- ✅ Cognito actualizado con custom attributes (tenantId, role)
+- ✅ GraphQL API configurada con userPool auth
+- ✅ amplify_outputs.json generado
+
+#### Recursos AWS Creados:
+- **Cognito User Pool:** amplifyAuthUserPool4BA7F805
+- **AppSync GraphQL API:** amplifyDataGraphQLAPI42A6FA33
+- **DynamoDB Tables:** 6 tablas (Cliente, ProductoCredito, Credito, Cuota, Pago, CierreCaja)
+- **IAM Roles:** Permisos configurados para userPool authentication
+
 #### Próximos Pasos:
-1. ✅ Deploy del backend con `npx amplify sandbox` (en progreso)
-2. Verificar que los modelos se crearon correctamente
-3. Commit de corrección a Git
-4. Continuar con Fase 2: Base de Datos Local
+1. ✅ ~~Esperar a que termine el deploy del backend~~
+2. ✅ ~~Verificar que los modelos se crearon correctamente~~
+3. Commit final del PROGRESS.md actualizado
+4. **SIGUIENTE:** Continuar con Fase 2: Base de Datos Local (Dexie + funciones puras)
 
 ---
 
@@ -252,11 +267,11 @@ git push origin main
 
 ### Hito 2: Setup y Base de Datos Local 🔄
 **Objetivo:** Proyecto configurado con Dexie funcionando
-**Estado:** En Progreso (50%)
+**Estado:** En Progreso (60%)
 **Tareas:**
 - [x] Ajustar backend Amplify (reemplazar Todo por modelos reales)
 - [x] Configurar Tailwind CSS
-- [ ] Deploy backend actualizado
+- [x] Deploy backend actualizado ✅
 - [ ] Configurar Dexie con schema completo
 - [ ] Implementar funciones puras de cálculo
 - [ ] Tests unitarios para funciones puras
