@@ -10,10 +10,12 @@
 import { useState } from 'react';
 import { useClientes } from '../../hooks/useClientes';
 import { ClienteCard } from './ClienteCard';
+import { ClienteDetail } from './ClienteDetail';
 
 export function ClientesList() {
   const { clientes, loading, error, buscar, queryBusqueda } = useClientes();
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<string | null>(null);
 
   // Loading state
   if (loading) {
@@ -36,6 +38,20 @@ export function ClientesList() {
           <p className="text-sm">{error.message}</p>
         </div>
       </div>
+    );
+  }
+
+  // Si hay un cliente seleccionado, mostrar detalle
+  if (clienteSeleccionado) {
+    return (
+      <ClienteDetail
+        clienteId={clienteSeleccionado}
+        onClose={() => setClienteSeleccionado(null)}
+        onOtorgarCredito={() => {
+          // TODO: Implementar otorgar crédito
+          console.log('Otorgar crédito a:', clienteSeleccionado);
+        }}
+      />
     );
   }
 
@@ -106,10 +122,7 @@ export function ClientesList() {
               <ClienteCard
                 key={cliente.id}
                 cliente={cliente}
-                onClick={() => {
-                  // TODO: Navegar a detalle del cliente
-                  console.log('Navegar a detalle:', cliente.id);
-                }}
+                onClick={() => setClienteSeleccionado(cliente.id)}
               />
             ))}
           </div>

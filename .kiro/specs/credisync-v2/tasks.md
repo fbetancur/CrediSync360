@@ -250,8 +250,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Mostrar saldo pendiente y créditos activos
   - _Requirements: 3.3, 3.4, 3.5_
 
-### [ ] 15. Implementar componente ClienteDetail
-- [ ] 15.1 Crear `src/components/clientes/ClienteDetail.tsx`
+### [x] 15. Implementar componente ClienteDetail
+- [x] 15.1 Crear `src/components/clientes/ClienteDetail.tsx`
   - Mostrar información personal completa
   - Mostrar count de créditos activos
   - Calcular y mostrar estado general
