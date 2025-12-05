@@ -322,13 +322,13 @@ export async function cleanupSyncedItems(): Promise<number> {
  * 
  * Regla simple: El servidor siempre gana
  * 
- * @param localData - Datos locales
+ * @param _localData - Datos locales (no usado, el servidor siempre gana)
  * @param serverData - Datos del servidor
  * @returns Datos resueltos (siempre del servidor)
  * 
  * Validates: Requirements 7.7, 7.8
  */
-export function resolveConflict<T>(localData: T, serverData: T): T {
+export function resolveConflict<T>(_localData: T, serverData: T): T {
   console.log('[Sync] Conflict detected, server wins');
   return serverData;
 }

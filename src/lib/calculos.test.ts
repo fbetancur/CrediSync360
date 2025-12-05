@@ -10,8 +10,6 @@ import {
   calcularSaldoPendiente,
   distribuirPago,
   generarFechasCuotas,
-  calcularEstadoCuota,
-  calcularDiasAtraso,
 } from './calculos';
 import type { Cuota, Pago } from '../types';
 
@@ -206,11 +204,9 @@ describe('distribuirPago', () => {
 
 describe('generarFechasCuotas', () => {
   it('should generate correct number of dates', () => {
-    const fechaDesembolso = new Date('2025-12-01');
-    const fechaPrimeraCuota = new Date('2025-12-02');
+    const fechaPrimeraCuota = new Date(2025, 11, 2); // December 2, 2025
 
     const fechas = generarFechasCuotas(
-      fechaDesembolso,
       fechaPrimeraCuota,
       5,
       'DIARIO',
@@ -221,11 +217,9 @@ describe('generarFechasCuotas', () => {
   });
 
   it('should generate daily dates correctly', () => {
-    const fechaDesembolso = new Date('2025-12-01');
-    const fechaPrimeraCuota = new Date('2025-12-02');
+    const fechaPrimeraCuota = new Date(2025, 11, 2); // December 2, 2025 (month is 0-indexed)
 
     const fechas = generarFechasCuotas(
-      fechaDesembolso,
       fechaPrimeraCuota,
       3,
       'DIARIO',
@@ -239,11 +233,9 @@ describe('generarFechasCuotas', () => {
 
   it('should skip Sundays when excluirDomingos is true', () => {
     // 2025-12-06 is Saturday, 2025-12-07 is Sunday
-    const fechaDesembolso = new Date('2025-12-05');
-    const fechaPrimeraCuota = new Date('2025-12-06');
+    const fechaPrimeraCuota = new Date(2025, 11, 6); // December 6, 2025
 
     const fechas = generarFechasCuotas(
-      fechaDesembolso,
       fechaPrimeraCuota,
       3,
       'DIARIO',
@@ -256,11 +248,9 @@ describe('generarFechasCuotas', () => {
   });
 
   it('should not skip Sundays when excluirDomingos is false', () => {
-    const fechaDesembolso = new Date('2025-12-05');
-    const fechaPrimeraCuota = new Date('2025-12-06');
+    const fechaPrimeraCuota = new Date(2025, 11, 6); // December 6, 2025
 
     const fechas = generarFechasCuotas(
-      fechaDesembolso,
       fechaPrimeraCuota,
       3,
       'DIARIO',
@@ -273,11 +263,9 @@ describe('generarFechasCuotas', () => {
   });
 
   it('should generate weekly dates correctly', () => {
-    const fechaDesembolso = new Date('2025-12-01');
-    const fechaPrimeraCuota = new Date('2025-12-02');
+    const fechaPrimeraCuota = new Date(2025, 11, 2); // December 2, 2025
 
     const fechas = generarFechasCuotas(
-      fechaDesembolso,
       fechaPrimeraCuota,
       3,
       'SEMANAL',
@@ -290,11 +278,9 @@ describe('generarFechasCuotas', () => {
   });
 
   it('should generate monthly dates correctly', () => {
-    const fechaDesembolso = new Date('2025-12-01');
-    const fechaPrimeraCuota = new Date('2025-12-02');
+    const fechaPrimeraCuota = new Date(2025, 11, 2); // December 2, 2025
 
     const fechas = generarFechasCuotas(
-      fechaDesembolso,
       fechaPrimeraCuota,
       3,
       'MENSUAL',
@@ -318,15 +304,20 @@ describe('Property Tests: distribuirPago', () => {
 
     fc.assert(
       fc.property(
-        fc.float({ min: 1, max: 10000 }), // payment amount
+        fc.float({ min: 1, max: 10000, noNaN: true }), // payment amount
         fc.array(
           fc.record({
             numero: fc.integer({ min: 1, max: 20 }),
-            monto: fc.float({ min: 1, max: 1000 }),
+            monto: fc.float({ min: 1, max: 1000, noNaN: true }),
           }),
           { minLength: 1, maxLength: 20 }
         ), // installments
         (monto, cuotasData) => {
+          // Skip if any values are NaN or invalid
+          if (!Number.isFinite(monto) || cuotasData.some(d => !Number.isFinite(d.monto))) {
+            return true;
+          }
+
           // Create cuotas from generated data
           const cuotas = cuotasData.map((data, index) =>
             createCuota(`c${index}`, data.numero, data.monto, '2025-12-01')
@@ -423,11 +414,7 @@ describe('Property Tests: generarFechasCuotas', () => {
         fc.date({ min: new Date('2025-01-01'), max: new Date('2025-12-31') }),
         fc.integer({ min: 1, max: 30 }),
         (fechaPrimeraCuota, numeroCuotas) => {
-          const fechaDesembolso = new Date(fechaPrimeraCuota);
-          fechaDesembolso.setDate(fechaDesembolso.getDate() - 1);
-
           const fechas = generarFechasCuotas(
-            fechaDesembolso,
             fechaPrimeraCuota,
             numeroCuotas,
             'DIARIO',
@@ -435,8 +422,9 @@ describe('Property Tests: generarFechasCuotas', () => {
           );
 
           // No date should fall on Sunday
+          // Parse dates with explicit time to avoid timezone issues
           fechas.forEach((fecha) => {
-            const date = new Date(fecha);
+            const date = new Date(fecha + 'T12:00:00');
             expect(date.getDay()).not.toBe(0); // 0 = Sunday
           });
 

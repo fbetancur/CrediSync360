@@ -269,6 +269,11 @@ export function generarFechasCuotas(
   const fechas: string[] = [];
   let fecha = new Date(fechaPrimeraCuota);
 
+  // Si excluir domingos está activo y la primera fecha es domingo, moverla al lunes
+  if (excluirDomingos && isSunday(fecha)) {
+    fecha = addDays(fecha, 1);
+  }
+
   for (let i = 0; i < numeroCuotas; i++) {
     // Agregar fecha actual
     fechas.push(format(fecha, 'yyyy-MM-dd'));
@@ -361,7 +366,7 @@ export function calcularScore(
  * Validates: Requirements 4.1, 4.2, 4.3, 4.4
  */
 export function calcularEstadoCliente(
-  cliente: Cliente,
+  _cliente: Cliente,
   creditos: Credito[],
   cuotas: Cuota[],
   pagos: Pago[]
@@ -374,7 +379,7 @@ export function calcularEstadoCliente(
       saldoTotal: 0,
       diasAtrasoMax: 0,
       estado: 'SIN_CREDITOS',
-      score: calcularScore(cliente, creditos, cuotas, pagos),
+      score: calcularScore(creditos, cuotas, pagos),
     };
   }
 
@@ -397,6 +402,6 @@ export function calcularEstadoCliente(
     saldoTotal,
     diasAtrasoMax,
     estado,
-    score: calcularScore(cliente, creditos, cuotas, pagos),
+    score: calcularScore(creditos, cuotas, pagos),
   };
 }
