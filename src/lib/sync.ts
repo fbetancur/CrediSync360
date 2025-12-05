@@ -1,0 +1,348 @@
+/**
+ * CrediSync360 V2 - Sync Manager
+ * 
+ * Maneja la sincronización offline-first entre IndexedDB y AWS AppSync.
+ * Todas las operaciones se guardan localmente primero y se sincronizan en background.
+ */
+
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../amplify/data/resource';
+import { db } from './db';
+import type { SyncQueueItem, SyncOperationType } from '../types';
+
+const client = generateClient<Schema>();
+
+// ============================================================================
+// Configuración
+// ============================================================================
+
+const SYNC_INTERVAL = 30000; // 30 segundos
+const MAX_RETRIES = 5;
+const INITIAL_BACKOFF = 1000; // 1 segundo
+const MAX_BACKOFF = 60000; // 1 minuto
+
+// ============================================================================
+// Estado del Sync Manager
+// ============================================================================
+
+let syncIntervalId: number | null = null;
+let isSyncing = false;
+
+// ============================================================================
+// Agregar Operaciones a la Cola
+// ============================================================================
+
+/**
+ * Agregar una operación a la cola de sincronización
+ * 
+ * @param type - Tipo de operación
+ * @param data - Datos de la operación
+ * 
+ * Property 14: Sync Queue FIFO Ordering
+ * Validates: Requirements 7.1, 7.2
+ */
+export async function addToSyncQueue(
+  type: SyncOperationType,
+  data: any
+): Promise<void> {
+  await db.syncQueue.add({
+    type,
+    data,
+    timestamp: Date.now(),
+    retries: 0,
+    status: 'PENDING',
+  });
+
+  console.log(`[Sync] Added to queue: ${type}`, data);
+}
+
+// ============================================================================
+// Procesar Cola de Sincronización
+// ============================================================================
+
+/**
+ * Procesar un item de la cola de sincronización
+ * 
+ * @param item - Item a sincronizar
+ * @returns true si se sincronizó exitosamente
+ * 
+ * Validates: Requirements 7.3, 7.4, 7.5
+ */
+async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
+  try {
+    console.log(`[Sync] Processing: ${item.type}`, item.data);
+
+    switch (item.type) {
+      case 'CREATE_CLIENTE':
+        await client.models.Cliente.create(item.data);
+        break;
+
+      case 'CREATE_CREDITO':
+        // Crear crédito y sus cuotas
+        await client.models.Credito.create(item.data.credito);
+        
+        // Crear cuotas en batch
+        for (const cuota of item.data.cuotas) {
+          await client.models.Cuota.create(cuota);
+        }
+        break;
+
+      case 'CREATE_PAGO':
+        await client.models.Pago.create(item.data);
+        break;
+
+      case 'CREATE_CIERRE':
+        await client.models.CierreCaja.create(item.data);
+        break;
+
+      default:
+        console.error(`[Sync] Unknown operation type: ${item.type}`);
+        return false;
+    }
+
+    console.log(`[Sync] Success: ${item.type}`);
+    return true;
+  } catch (error) {
+    console.error(`[Sync] Error processing ${item.type}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Calcular tiempo de espera con exponential backoff
+ * 
+ * @param retries - Número de reintentos
+ * @returns Tiempo de espera en milisegundos
+ * 
+ * Property 16: Sync Retry Exponential Backoff
+ * Validates: Requirements 7.5
+ */
+function calculateBackoff(retries: number): number {
+  const backoff = INITIAL_BACKOFF * Math.pow(2, retries);
+  return Math.min(backoff, MAX_BACKOFF);
+}
+
+/**
+ * Procesar toda la cola de sincronización
+ * 
+ * Property 14: Sync Queue FIFO Ordering
+ * Validates: Requirements 7.3, 7.4, 7.5, 7.6
+ */
+async function processSyncQueue(): Promise<void> {
+  if (isSyncing) {
+    console.log('[Sync] Already syncing, skipping...');
+    return;
+  }
+
+  if (!navigator.onLine) {
+    console.log('[Sync] Offline, skipping sync...');
+    return;
+  }
+
+  isSyncing = true;
+
+  try {
+    // Obtener items pendientes ordenados por timestamp (FIFO)
+    const pendingItems = await db.syncQueue
+      .where('status')
+      .equals('PENDING')
+      .sortBy('timestamp');
+
+    if (pendingItems.length === 0) {
+      console.log('[Sync] No pending items');
+      return;
+    }
+
+    console.log(`[Sync] Processing ${pendingItems.length} items...`);
+
+    for (const item of pendingItems) {
+      // Verificar si debe esperar por backoff
+      if (item.retries > 0) {
+        const backoff = calculateBackoff(item.retries);
+        const timeSinceLastRetry = Date.now() - (item.timestamp || 0);
+        
+        if (timeSinceLastRetry < backoff) {
+          console.log(
+            `[Sync] Waiting for backoff: ${item.type} (${backoff - timeSinceLastRetry}ms remaining)`
+          );
+          continue;
+        }
+      }
+
+      // Intentar sincronizar
+      const success = await processSyncItem(item);
+
+      if (success) {
+        // Marcar como sincronizado
+        await db.syncQueue.update(item.id!, {
+          status: 'SYNCED',
+          syncedAt: Date.now(),
+        });
+      } else {
+        // Incrementar reintentos
+        const newRetries = item.retries + 1;
+
+        if (newRetries >= MAX_RETRIES) {
+          // Marcar como fallido después de MAX_RETRIES
+          await db.syncQueue.update(item.id!, {
+            status: 'FAILED',
+            retries: newRetries,
+            lastError: 'Max retries exceeded',
+          });
+
+          console.error(`[Sync] Failed after ${MAX_RETRIES} retries: ${item.type}`);
+          
+          // TODO: Notificar al usuario
+        } else {
+          // Incrementar contador de reintentos
+          await db.syncQueue.update(item.id!, {
+            retries: newRetries,
+            lastError: 'Sync failed, will retry',
+          });
+
+          console.log(`[Sync] Retry ${newRetries}/${MAX_RETRIES}: ${item.type}`);
+        }
+      }
+    }
+
+    console.log('[Sync] Queue processing complete');
+  } catch (error) {
+    console.error('[Sync] Error processing queue:', error);
+  } finally {
+    isSyncing = false;
+  }
+}
+
+// ============================================================================
+// Control del Sync Manager
+// ============================================================================
+
+/**
+ * Iniciar sincronización automática en background
+ * 
+ * Validates: Requirements 7.3, 7.10
+ */
+export function startSync(): void {
+  if (syncIntervalId !== null) {
+    console.log('[Sync] Already running');
+    return;
+  }
+
+  console.log(`[Sync] Starting background sync (every ${SYNC_INTERVAL}ms)`);
+
+  // Sincronizar inmediatamente
+  processSyncQueue();
+
+  // Configurar intervalo
+  syncIntervalId = window.setInterval(() => {
+    processSyncQueue();
+  }, SYNC_INTERVAL);
+
+  // Escuchar eventos de conexión
+  window.addEventListener('online', () => {
+    console.log('[Sync] Connection restored, syncing...');
+    processSyncQueue();
+  });
+
+  window.addEventListener('offline', () => {
+    console.log('[Sync] Connection lost');
+  });
+}
+
+/**
+ * Detener sincronización automática
+ */
+export function stopSync(): void {
+  if (syncIntervalId !== null) {
+    console.log('[Sync] Stopping background sync');
+    clearInterval(syncIntervalId);
+    syncIntervalId = null;
+  }
+}
+
+/**
+ * Forzar sincronización inmediata
+ * 
+ * @returns Promise que se resuelve cuando termina la sincronización
+ */
+export async function forceSyncNow(): Promise<void> {
+  console.log('[Sync] Forcing immediate sync...');
+  await processSyncQueue();
+}
+
+/**
+ * Obtener estadísticas de la cola de sincronización
+ * 
+ * @returns Estadísticas de la cola
+ */
+export async function getSyncStats(): Promise<{
+  pending: number;
+  synced: number;
+  failed: number;
+  total: number;
+}> {
+  const [pending, synced, failed, total] = await Promise.all([
+    db.syncQueue.where('status').equals('PENDING').count(),
+    db.syncQueue.where('status').equals('SYNCED').count(),
+    db.syncQueue.where('status').equals('FAILED').count(),
+    db.syncQueue.count(),
+  ]);
+
+  return { pending, synced, failed, total };
+}
+
+/**
+ * Limpiar items sincronizados antiguos (más de 7 días)
+ * 
+ * @returns Número de items eliminados
+ */
+export async function cleanupSyncedItems(): Promise<number> {
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const oldItems = await db.syncQueue
+    .where('status')
+    .equals('SYNCED')
+    .and((item) => (item.syncedAt || 0) < sevenDaysAgo)
+    .toArray();
+
+  if (oldItems.length > 0) {
+    await db.syncQueue.bulkDelete(oldItems.map((item) => item.id!));
+    console.log(`[Sync] Cleaned up ${oldItems.length} old synced items`);
+  }
+
+  return oldItems.length;
+}
+
+// ============================================================================
+// Resolución de Conflictos
+// ============================================================================
+
+/**
+ * Resolver conflicto entre datos locales y del servidor
+ * 
+ * Regla simple: El servidor siempre gana
+ * 
+ * @param localData - Datos locales
+ * @param serverData - Datos del servidor
+ * @returns Datos resueltos (siempre del servidor)
+ * 
+ * Validates: Requirements 7.7, 7.8
+ */
+export function resolveConflict<T>(localData: T, serverData: T): T {
+  console.log('[Sync] Conflict detected, server wins');
+  return serverData;
+}
+
+// ============================================================================
+// Exportar para uso en la aplicación
+// ============================================================================
+
+export default {
+  addToSyncQueue,
+  startSync,
+  stopSync,
+  forceSyncNow,
+  getSyncStats,
+  cleanupSyncedItems,
+  resolveConflict,
+};
