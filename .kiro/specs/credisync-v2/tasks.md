@@ -174,7 +174,7 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Test de drag & drop
   - _Requirements: 1.9_
 
-### [ ] 9. Checkpoint - Verificar pantalla de cobros
+### [x] 9. Checkpoint - Verificar pantalla de cobros
 - Ensure all tests pass, ask the user if questions arise.
 
 ---

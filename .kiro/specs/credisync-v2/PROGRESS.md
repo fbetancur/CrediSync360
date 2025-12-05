@@ -8,15 +8,15 @@
 
 ## 📊 Estado General del Proyecto
 
-### Fase Actual: Implementación - Fase 1 ✅
-- ✅ Proyecto base con Amplify Gen2 configurado (Tutorial paso 1-5)
-- ✅ requirements.md transformado a formato EARS estándar
-- ✅ design.md creado con Correctness Properties
-- ✅ tasks.md creado con 28 tareas ejecutables
-- ✅ Tarea 1: Tailwind CSS v4 configurado
-- ✅ Tarea 2: Amplify Backend actualizado con modelos reales
-- ⏳ Pendiente: Deploy del backend
-- ⏳ Pendiente: Fase 2 (Base de Datos Local)
+### Fase Actual: Implementación - Fase 5 ⏳
+- ✅ Fase 1: Setup y Configuración (COMPLETA)
+- ✅ Fase 2: Base de Datos Local (COMPLETA)
+- ✅ Fase 3: Sync Manager (COMPLETA)
+- ✅ Fase 4: Pantalla Principal - Ruta del Día (COMPLETA) 🎉
+- ⏳ Fase 5: Registro de Pagos (SIGUIENTE)
+  - Tarea 10: Implementar hook useCobro
+  - Tarea 11: Implementar modal RegistrarPago
+  - Tarea 12: Checkpoint de flujo de cobro
 
 ---
 
@@ -48,6 +48,48 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 ---
 
 ## 📝 Registro de Actividades
+
+### 2025-12-05 - Sesión 5: Checkpoint Fase 4 y Preparación Fase 5
+
+#### Actividades Realizadas:
+1. ✅ Tarea 9: Checkpoint - Verificar pantalla de cobros
+   - ✅ Ejecutados todos los tests: 21/21 pasando (100%)
+   - ✅ Verificado que la aplicación funciona correctamente
+   - ✅ Pantalla principal lista para agregar datos de prueba
+   - ✅ 0 errores TypeScript
+
+#### Estado del Proyecto:
+- **Fase 4 COMPLETA:** ✅ Pantalla Principal - Ruta del Día
+  - Hook useRuta implementado y funcionando
+  - Componente RutaDelDia con estadísticas y drag & drop
+  - Componente ClienteCard con indicadores visuales
+  - Script de datos de prueba disponible
+  - Guía TESTING.md completa
+
+#### Logros de Sesión 5:
+- **Checkpoint completado:** Todos los tests pasando
+- **Aplicación funcional:** Lista para testing con datos reales
+- **Documentación actualizada:** PROGRESS.md y tasks.md
+
+#### Logros Técnicos:
+- **Aplicación funcionando:** Datos de prueba cargados correctamente
+- **5 clientes visibles:** María García y Juan Pérez con mora (tarjetas rojas)
+- **Ordenamiento correcto:** Clientes atrasados primero
+- **Drag & drop funcional:** Reordenamiento de ruta operativo
+- **Estadísticas en tiempo real:** Total cobrado, cuotas cobradas/pendientes
+
+#### Warnings Conocidos:
+- `react-beautiful-dnd` defaultProps warning: Solo desarrollo, no afecta funcionalidad
+- `Unable to find draggable`: Mensaje de desarrollo, drag & drop funciona correctamente
+
+#### Próximos Pasos:
+1. ✅ ~~Usuario agregó datos de prueba~~ (COMPLETADO)
+2. **SIGUIENTE:** Fase 5 - Registro de Pagos
+   - Tarea 10: Implementar hook useCobro
+   - Tarea 11: Implementar modal RegistrarPago
+   - Tarea 12: Checkpoint de flujo de cobro completo
+
+---
 
 ### 2025-12-05 - Sesión 4: Implementación Fase 4 - Pantalla Principal
 
@@ -500,15 +542,16 @@ git push origin main
 
 ---
 
-### Hito 3: MVP - Pantalla de Cobros ⏳
+### Hito 3: MVP - Pantalla de Cobros 🔄
 **Objetivo:** Flujo completo de cobro funcionando
-**Estado:** No Iniciado (0%)
+**Estado:** En Progreso (60%)
 **Tareas:**
-- [ ] Hook useRuta
-- [ ] Pantalla RutaDelDia
-- [ ] Componente ClienteCard
-- [ ] Modal RegistrarPago
-- [ ] Distribución de pagos
+- [x] Hook useRuta ✅
+- [x] Pantalla RutaDelDia ✅
+- [x] Componente ClienteCard ✅
+- [ ] Hook useCobro ⏳
+- [ ] Modal RegistrarPago ⏳
+- [ ] Distribución de pagos ⏳
 
 **Fecha Estimada:** 11 de diciembre de 2025
 
@@ -601,15 +644,16 @@ git push origin main
 - Fase de especificación: COMPLETA
 
 ### Implementación:
-- Tareas completadas: 8/28 (29%)
+- Tareas completadas: 9/28 (32%)
 - Sub-tareas completadas: 16/67 (24%)
 - Fase 1: COMPLETA ✅ (2/2 tareas)
 - Fase 2: COMPLETA ✅ (2/2 tareas)
 - Fase 3: COMPLETA ✅ (2/2 tareas)
-- Fase 4: EN PROGRESO 🔄 (2/3 tareas completadas)
+- Fase 4: COMPLETA ✅ (3/3 tareas) 🎉
+- Fase 5: PENDIENTE ⏳ (0/3 tareas)
 - Tests escritos: 21 tests (18 unit + 3 property-based) ✅
 - Tests pasando: 21/21 (100%) ✅
-- **Aplicación funcional:** Pantalla principal lista para testing
+- **Aplicación funcional:** Pantalla principal lista para testing con datos reales
 
 ### Commits:
 - Total commits: 11
