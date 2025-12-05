@@ -35,14 +35,13 @@ const schema = a.schema({
       interesPorcentaje: a.float().required(),
       numeroCuotas: a.integer().required(),
       frecuencia: a.enum(["DIARIO", "SEMANAL", "QUINCENAL", "MENSUAL"]),
-      excluirDomingos: a.boolean().default(true),
+      excluirDomingos: a.boolean().required(),
       montoMinimo: a.float(),
       montoMaximo: a.float(),
-      activo: a.boolean().default(true),
+      activo: a.boolean().required(),
     })
     .authorization((allow) => [
-      allow.authenticated().to(["read"]),
-      allow.authenticated().to(["create", "update", "delete"]),
+      allow.authenticated(),
     ]),
 
   // Modelo: Crédito
@@ -64,7 +63,7 @@ const schema = a.schema({
       fechaPrimeraCuota: a.date().required(),
       fechaUltimaCuota: a.date().required(),
       // Estado
-      estado: a.enum(["ACTIVO", "CANCELADO", "CASTIGADO"]).default("ACTIVO"),
+      estado: a.enum(["ACTIVO", "CANCELADO", "CASTIGADO"]),
       // Relaciones
       cliente: a.belongsTo("Cliente", "clienteId"),
       cuotas: a.hasMany("Cuota", "creditoId"),

@@ -80,10 +80,16 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 - **Modelos:** 6 modelos principales con relaciones definidas
 - **Custom Attributes:** tenantId y role para multitenant
 
+#### Issues Encontrados y Resueltos:
+1. ❌ **Error TypeScript en schema:** `.default()` no existe en enums de Amplify Gen2
+   - **Solución:** Removido `.default()` de enums y cambiado booleans a `.required()`
+   - **Archivos afectados:** amplify/data/resource.ts
+   - **Estado:** ✅ Resuelto
+
 #### Próximos Pasos:
-1. Deploy del backend con `npx amplify sandbox`
+1. ✅ Deploy del backend con `npx amplify sandbox` (en progreso)
 2. Verificar que los modelos se crearon correctamente
-3. Commit a Git
+3. Commit de corrección a Git
 4. Continuar con Fase 2: Base de Datos Local
 
 ---
@@ -316,7 +322,39 @@ git push origin main
 *Ninguno por ahora*
 
 ### Issues Resueltos:
-*Ninguno por ahora*
+
+#### Issue #1: TypeScript Error en Amplify Schema
+**Fecha:** 5 de diciembre de 2025  
+**Error:** `Property 'default' does not exist on type 'EnumType'`  
+**Causa:** Amplify Gen2 no soporta `.default()` en enums  
+**Solución:** 
+- Removido `.default("ACTIVO")` del enum estado
+- Cambiado `a.boolean().default(true)` a `a.boolean().required()`
+- Los valores default se manejarán en la capa de aplicación
+**Archivos:** amplify/data/resource.ts  
+**Estado:** ✅ Resuelto
+
+#### Issue #2: TypeScript Errors en App.tsx
+**Fecha:** 5 de diciembre de 2025  
+**Error:** `Property 'Todo' does not exist on type` (4 errores)  
+**Causa:** App.tsx todavía usaba el modelo Todo que fue reemplazado  
+**Solución:** 
+- Reemplazado App.tsx con pantalla de bienvenida temporal
+- Muestra progreso de Fase 1 completada
+- Muestra próximas funcionalidades
+- Sin dependencias de modelos de datos (por ahora)
+**Archivos:** src/App.tsx  
+**Estado:** ✅ Resuelto
+
+#### Issue #3: Authorization Conflict en ProductoCredito
+**Fecha:** 5 de diciembre de 2025  
+**Error:** `@auth ProductoCredito:userPools:private already exists`  
+**Causa:** Dos reglas `allow.authenticated()` duplicadas causaban conflicto  
+**Solución:** 
+- Simplificado a una sola regla: `allow.authenticated()`
+- Esto permite read, create, update, delete por defecto
+**Archivos:** amplify/data/resource.ts  
+**Estado:** ✅ Resuelto
 
 ---
 
