@@ -183,6 +183,14 @@ export interface ClienteConCuota extends Cliente {
   credito?: Credito;
 }
 
+export interface ClienteRuta {
+  cliente: Cliente;
+  credito: Credito;
+  cuotas: Cuota[];
+  totalPendiente: number;
+  diasAtrasoMax: number;
+}
+
 export interface DistribucionPago {
   cuotaId: string;
   montoPagar: number;

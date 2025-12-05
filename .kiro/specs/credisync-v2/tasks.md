@@ -127,8 +127,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 
 ## Fase 4: Pantalla Principal - Ruta del Día
 
-### [ ] 7. Implementar hook useRuta
-- [ ] 7.1 Crear `src/hooks/useRuta.ts`
+### [x] 7. Implementar hook useRuta
+- [x] 7.1 Crear `src/hooks/useRuta.ts`
   - Cargar cuotas del día desde Dexie
   - Cargar clientes, créditos y pagos relacionados
   - Calcular estado de cada cliente (saldo, días atraso)

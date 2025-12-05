@@ -49,6 +49,36 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 
 ## 📝 Registro de Actividades
 
+### 2025-12-05 - Sesión 4: Implementación Fase 4
+
+#### Actividades Realizadas:
+1. ✅ Tarea 7: Implementar hook useRuta
+   - ✅ Sub-tarea 7.1: Creado src/hooks/useRuta.ts
+     - Hook personalizado para gestionar la ruta del día
+     - Carga cuotas del día y atrasadas desde Dexie
+     - Agrupa múltiples cuotas atrasadas por cliente (Property 2)
+     - Ordena: atrasados primero por días desc, luego del día (Property 3)
+     - Calcula estadísticas: total cobrado hoy, cuotas cobradas/pendientes
+     - Función de reordenamiento manual de ruta
+     - Usa useLiveQuery de dexie-react-hooks para reactividad
+   - ✅ Instalado dexie-react-hooks
+   - ✅ Creado tipo ClienteRuta en types/index.ts
+   - ✅ 0 errores TypeScript
+
+#### Logros Técnicos:
+- **Hook reactivo:** Usa useLiveQuery para actualizaciones automáticas
+- **Agrupación inteligente:** Múltiples cuotas atrasadas = 1 tarjeta por cliente
+- **Ordenamiento:** Atrasados primero (por días desc), luego del día
+- **Estadísticas en tiempo real:** Total cobrado, cuotas cobradas/pendientes
+- **Reordenamiento:** Función para personalizar orden de ruta
+
+#### Próximos Pasos:
+1. Tarea 8: Crear pantalla RutaDelDia
+2. Tarea 9: Implementar componente ClienteCard
+3. Tarea 10: Implementar modal RegistrarPago
+
+---
+
 ### 2025-12-05 - Sesión 3: Implementación Fase 2
 
 #### Actividades Realizadas:
