@@ -181,8 +181,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 
 ## Fase 5: Registro de Pagos
 
-### [ ] 10. Implementar hook useCobro
-- [ ] 10.1 Crear `src/hooks/useCobro.ts`
+### [x] 10. Implementar hook useCobro
+- [x] 10.1 Crear `src/hooks/useCobro.ts`
   - Función registrarPago que guarda en Dexie
   - Función que agrega operación a sync queue
   - Función distribuirPago usando calculos.ts
@@ -197,8 +197,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Verificar que solo existe 1 registro
   - _Requirements: 2.6, 2.7_
 
-### [ ] 11. Implementar componente RegistrarPago
-- [ ] 11.1 Crear `src/components/cobros/RegistrarPago.tsx`
+### [x] 11. Implementar componente RegistrarPago
+- [x] 11.1 Crear `src/components/cobros/RegistrarPago.tsx`
   - Modal con información del cliente y crédito
   - Input de monto pre-llenado con saldo pendiente
   - Validación de monto > 0

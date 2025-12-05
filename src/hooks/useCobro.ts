@@ -42,7 +42,7 @@ export function useCobro(): UseCobroReturn {
 
     try {
       // Generar ID único
-      const pagoId = `pago-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const pagoId = `pago-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       
       // Crear objeto de pago completo
       const pago: Pago = {
@@ -82,10 +82,7 @@ export function useCobro(): UseCobroReturn {
       console.log('✅ Pago registrado:', pago);
 
       // Agregar a sync queue (Requirements 2.7)
-      await addToSyncQueue({
-        type: 'CREATE_PAGO',
-        data: pago,
-      });
+      await addToSyncQueue('CREATE_PAGO', pago);
 
       // La UI se actualizará automáticamente gracias a useLiveQuery (Requirements 2.8)
       
