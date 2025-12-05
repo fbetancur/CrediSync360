@@ -1,17 +1,139 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any user authenticated via an API key can "create", "read",
-"update", and "delete" any "Todo" records.
-=========================================================================*/
+/*
+ * CrediSync360 V2 - Data Schema
+ * 
+ * Este schema define los modelos de datos para la aplicación de microcréditos.
+ * Todos los modelos incluyen tenantId para aislamiento multitenant.
+ */
+
 const schema = a.schema({
-  Todo: a
+  // Modelo: Cliente
+  Cliente: a
     .model({
-      content: a.string(),
+      tenantId: a.string().required(),
+      nombre: a.string().required(),
+      documento: a.string().required(),
+      telefono: a.string().required(),
+      direccion: a.string().required(),
+      barrio: a.string(),
+      referencia: a.string(),
+      latitud: a.float(),
+      longitud: a.float(),
+      // Relaciones
+      creditos: a.hasMany("Credito", "clienteId"),
     })
-    .authorization((allow) => [allow.publicApiKey()]),
+    .authorization((allow) => [
+      allow.authenticated().to(["read", "create", "update"]),
+    ]),
+
+  // Modelo: Producto de Crédito
+  ProductoCredito: a
+    .model({
+      tenantId: a.string().required(),
+      nombre: a.string().required(),
+      interesPorcentaje: a.float().required(),
+      numeroCuotas: a.integer().required(),
+      frecuencia: a.enum(["DIARIO", "SEMANAL", "QUINCENAL", "MENSUAL"]),
+      excluirDomingos: a.boolean().default(true),
+      montoMinimo: a.float(),
+      montoMaximo: a.float(),
+      activo: a.boolean().default(true),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(["read"]),
+      allow.authenticated().to(["create", "update", "delete"]),
+    ]),
+
+  // Modelo: Crédito
+  Credito: a
+    .model({
+      tenantId: a.string().required(),
+      clienteId: a.id().required(),
+      productoId: a.id().required(),
+      cobradorId: a.string().required(),
+      // Datos del crédito
+      montoOriginal: a.float().required(),
+      interesPorcentaje: a.float().required(),
+      totalAPagar: a.float().required(),
+      numeroCuotas: a.integer().required(),
+      valorCuota: a.float().required(),
+      frecuencia: a.enum(["DIARIO", "SEMANAL", "QUINCENAL", "MENSUAL"]),
+      // Fechas
+      fechaDesembolso: a.date().required(),
+      fechaPrimeraCuota: a.date().required(),
+      fechaUltimaCuota: a.date().required(),
+      // Estado
+      estado: a.enum(["ACTIVO", "CANCELADO", "CASTIGADO"]).default("ACTIVO"),
+      // Relaciones
+      cliente: a.belongsTo("Cliente", "clienteId"),
+      cuotas: a.hasMany("Cuota", "creditoId"),
+      pagos: a.hasMany("Pago", "creditoId"),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(["read", "create"]),
+    ]),
+
+  // Modelo: Cuota
+  Cuota: a
+    .model({
+      tenantId: a.string().required(),
+      creditoId: a.id().required(),
+      clienteId: a.id().required(),
+      // Datos de la cuota
+      numero: a.integer().required(),
+      fechaProgramada: a.date().required(),
+      montoProgramado: a.float().required(),
+      // Relaciones
+      credito: a.belongsTo("Credito", "creditoId"),
+      pagos: a.hasMany("Pago", "cuotaId"),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(["read", "create"]),
+    ]),
+
+  // Modelo: Pago (Inmutable)
+  Pago: a
+    .model({
+      tenantId: a.string().required(),
+      creditoId: a.id().required(),
+      cuotaId: a.id().required(),
+      clienteId: a.id().required(),
+      cobradorId: a.string().required(),
+      // Datos del pago
+      monto: a.float().required(),
+      fecha: a.date().required(),
+      // Ubicación
+      latitud: a.float(),
+      longitud: a.float(),
+      // Observaciones
+      observaciones: a.string(),
+      // Relaciones
+      credito: a.belongsTo("Credito", "creditoId"),
+      cuota: a.belongsTo("Cuota", "cuotaId"),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(["read", "create"]),
+      // Los pagos son inmutables - no se pueden actualizar ni eliminar
+    ]),
+
+  // Modelo: Cierre de Caja
+  CierreCaja: a
+    .model({
+      tenantId: a.string().required(),
+      cobradorId: a.string().required(),
+      fecha: a.date().required(),
+      // Datos del cierre
+      totalCobrado: a.float().required(),
+      cuotasCobradas: a.integer().required(),
+      cuotasTotales: a.integer().required(),
+      clientesVisitados: a.integer().required(),
+      efectivoEnMano: a.float().required(),
+      observaciones: a.string(),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(["read", "create"]),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -19,39 +141,6 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "apiKey",
-    // API Key is used for a.allow.public() rules
-    apiKeyAuthorizationMode: {
-      expiresInDays: 30,
-    },
+    defaultAuthorizationMode: "userPool",
   },
 });
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
