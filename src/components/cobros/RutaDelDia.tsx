@@ -67,10 +67,50 @@ export function RutaDelDia() {
   // Empty state
   if (rutaDelDia.length === 0) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center text-gray-600">
-          <p className="text-xl font-semibold mb-2">🎉 ¡No hay cobros pendientes!</p>
-          <p className="text-sm">Todos los clientes están al día</p>
+      <div className="flex items-center justify-center h-screen bg-gray-50 p-4">
+        <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              👋 ¡Bienvenido a CrediSync360!
+            </h1>
+            <p className="text-gray-600">
+              No hay datos en la base de datos local
+            </p>
+          </div>
+
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+            <h2 className="font-semibold text-blue-900 mb-2">
+              📝 Para agregar datos de prueba:
+            </h2>
+            <ol className="space-y-2 text-sm text-blue-800">
+              <li>1. Abre las DevTools (presiona F12)</li>
+              <li>2. Ve a la pestaña <strong>Console</strong></li>
+              <li>3. Ejecuta este comando:</li>
+            </ol>
+            <div className="bg-blue-900 text-blue-100 p-3 rounded mt-3 font-mono text-sm">
+              await window.seedData.resetAndSeed()
+            </div>
+            <p className="text-xs text-blue-700 mt-2">
+              Luego presiona Enter y recarga la página (F5)
+            </p>
+          </div>
+
+          <div className="bg-green-50 border-l-4 border-green-500 p-4">
+            <h2 className="font-semibold text-green-900 mb-2">
+              ✅ Esto creará:
+            </h2>
+            <ul className="space-y-1 text-sm text-green-800">
+              <li>• 5 clientes de prueba</li>
+              <li>• 5 créditos activos</li>
+              <li>• 50 cuotas (algunas atrasadas, algunas de hoy)</li>
+            </ul>
+          </div>
+
+          <div className="mt-6 text-center text-sm text-gray-500">
+            <p>
+              💡 Tip: Lee el archivo <strong>TESTING.md</strong> para más información
+            </p>
+          </div>
         </div>
       </div>
     );
