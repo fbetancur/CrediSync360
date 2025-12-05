@@ -153,8 +153,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Verificar orden por días de atraso descendente
   - _Requirements: 1.6, 1.7_
 
-### [ ] 8. Implementar componente RutaDelDia
-- [ ] 8.1 Crear `src/components/cobros/RutaDelDia.tsx`
+### [x] 8. Implementar componente RutaDelDia
+- [x] 8.1 Crear `src/components/cobros/RutaDelDia.tsx`
   - Usar hook useRuta para cargar datos
   - Mostrar resumen: total recaudado, cuotas cobradas/pendientes
   - Renderizar lista de clientes con react-window (virtualización)
@@ -162,7 +162,7 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Manejar loading y error states
   - _Requirements: 1.1, 1.2, 1.3, 1.9_
 
-- [ ] 8.2 Crear `src/components/cobros/ClienteCard.tsx`
+- [x] 8.2 Crear `src/components/cobros/ClienteCard.tsx`
   - Mostrar nombre, cuotas atrasadas, monto, frecuencia, dirección
   - Indicador visual de estado (rojo=mora, verde=al día)
   - Click handler para abrir modal de pago
