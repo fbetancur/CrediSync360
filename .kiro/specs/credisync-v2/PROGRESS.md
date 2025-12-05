@@ -78,6 +78,18 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 - **Drag & drop funcional:** Reordenamiento de ruta operativo
 - **Estadísticas en tiempo real:** Total cobrado, cuotas cobradas/pendientes
 
+#### Issue #5: Tailwind CSS no aplicando estilos
+**Fecha:** 5 de diciembre de 2025  
+**Error:** Solo se veía texto sin tarjetas visuales  
+**Causa:** Faltaban archivos de configuración (tailwind.config.js, postcss.config.js)  
+**Solución:** 
+- Creado `tailwind.config.js` con content paths
+- Creado `postcss.config.js` con plugins
+- Actualizado `src/index.css` con directivas @tailwind correctas
+- Reiniciado servidor de desarrollo
+**Archivos:** tailwind.config.js, postcss.config.js, src/index.css  
+**Estado:** ✅ Resuelto
+
 #### Warnings Conocidos:
 - `react-beautiful-dnd` defaultProps warning: Solo desarrollo, no afecta funcionalidad
 - `Unable to find draggable`: Mensaje de desarrollo, drag & drop funciona correctamente
