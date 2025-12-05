@@ -20,26 +20,26 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 
 ## Fase 1: Setup y Configuración
 
-### [ ] 1. Configurar Tailwind CSS
+### [x] 1. Configurar Tailwind CSS
 - Instalar Tailwind CSS y sus dependencias
 - Configurar `tailwind.config.js`
 - Agregar directivas de Tailwind a `index.css`
 - Verificar que los estilos funcionen
 - _Requirements: 9.1, 9.2_
 
-### [ ] 2. Configurar Amplify Backend con modelos reales
-- [ ] 2.1 Actualizar schema de datos en `amplify/data/resource.ts`
+### [x] 2. Configurar Amplify Backend con modelos reales
+- [x] 2.1 Actualizar schema de datos en `amplify/data/resource.ts`
   - Reemplazar modelo Todo por Cliente, Credito, Cuota, Pago
   - Definir relaciones entre modelos
   - Configurar authorization rules con tenantId
   - _Requirements: 8.4, 8.5, 8.6, 10.2_
 
-- [ ] 2.2 Actualizar configuración de Auth en `amplify/auth/resource.ts`
+- [x] 2.2 Actualizar configuración de Auth in `amplify/auth/resource.ts`
   - Agregar custom attributes: tenantId, role
   - Configurar email verification
   - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ] 2.3 Deploy del backend actualizado
+- [x] 2.3 Deploy del backend actualizado
   - Ejecutar `npx amplify sandbox deploy`
   - Verificar que los modelos se crearon correctamente
   - _Requirements: 10.1_
@@ -48,21 +48,21 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 
 ## Fase 2: Base de Datos Local y Lógica de Negocio
 
-### [ ] 3. Implementar Dexie database
-- [ ] 3.1 Crear schema de Dexie en `src/lib/db.ts`
+### [x] 3. Implementar Dexie database
+- [x] 3.1 Crear schema de Dexie en `src/lib/db.ts`
   - Definir tablas: clientes, creditos, cuotas, pagos, productos, syncQueue
   - Configurar índices compuestos para queries optimizadas
   - Exportar instancia de base de datos
   - _Requirements: 7.1, 9.5_
 
-- [ ] 3.2 Crear tipos TypeScript en `src/types/index.ts`
+- [x] 3.2 Crear tipos TypeScript en `src/types/index.ts`
   - Definir interfaces para todas las entidades
   - Definir tipos para estados calculados
   - Definir tipos para sync queue
   - _Requirements: All_
 
-### [ ] 4. Implementar funciones puras de cálculo
-- [ ] 4.1 Crear `src/lib/calculos.ts` con funciones de cálculo
+### [x] 4. Implementar funciones puras de cálculo
+- [x] 4.1 Crear `src/lib/calculos.ts` con funciones de cálculo
   - `calcularSaldoPendiente(cuotas, pagos): number`
   - `calcularDiasAtraso(cuotas, pagos): number`
   - `distribuirPago(monto, cuotas, pagos): Distribution[]`
@@ -72,14 +72,14 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - `generarFechasCuotas(...): string[]`
   - _Requirements: 2.9, 2.10, 4.5, 4.6, 4.7, 4.8, 5.8, 5.11_
 
-- [ ]* 4.2 Escribir tests unitarios para funciones de cálculo
+- [x]* 4.2 Escribir tests unitarios para funciones de cálculo
   - Test para calcularSaldoPendiente con diferentes escenarios
   - Test para distribuirPago con pagos completos y parciales
   - Test para calcularScore con diferentes historiales
   - Test para generarFechasCuotas excluyendo domingos
   - _Requirements: 2.9, 2.10, 4.5, 5.8_
 
-- [ ]* 4.3 Escribir property test para distribución de pagos
+- [x]* 4.3 Escribir property test para distribución de pagos
   - **Property 5: Payment Distribution Correctness**
   - **Validates: Requirements 2.9, 2.10**
   - Generar montos y cuotas aleatorias
@@ -88,29 +88,29 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Verificar que ninguna cuota recibe más de su saldo
   - _Requirements: 2.9, 2.10_
 
-- [ ]* 4.4 Escribir property test para cálculo de saldo
+- [x]* 4.4 Escribir property test para cálculo de saldo
   - **Property 7: Balance Calculation Consistency**
   - **Validates: Requirements 2.2, 4.9**
   - Generar créditos, cuotas y pagos aleatorios
   - Verificar que saldo = suma(cuotas) - suma(pagos)
   - _Requirements: 2.2, 4.9_
 
-### [ ] 5. Checkpoint - Verificar base de datos y cálculos
+### [x] 5. Checkpoint - Verificar base de datos y cálculos
 - Ensure all tests pass, ask the user if questions arise.
 
 ---
 
 ## Fase 3: Sincronización Offline-First
 
-### [ ] 6. Implementar Sync Manager
-- [ ] 6.1 Crear `src/lib/sync.ts` con lógica de sincronización
+### [x] 6. Implementar Sync Manager
+- [x] 6.1 Crear `src/lib/sync.ts` con lógica de sincronización
   - Función para agregar operaciones a sync queue
   - Función para procesar sync queue cada 30s
   - Función para manejar reintentos con backoff exponencial
   - Función para resolver conflictos (servidor gana)
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
 
-- [ ] 6.2 Implementar background sync con setInterval
+- [x] 6.2 Implementar background sync con setInterval
   - Verificar conexión a internet
   - Procesar items PENDING en orden FIFO
   - Actualizar status a SYNCED o incrementar retries

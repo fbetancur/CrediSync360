@@ -134,9 +134,12 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 
 #### Próximos Pasos:
 1. ✅ ~~Resolver issue de tests~~ (COMPLETADO)
-2. Tarea 5: Checkpoint - Verificar que todo funciona
-3. Commit de Fase 2, 3 y Tests
-4. Continuar con Fase 4: Pantalla Principal - Ruta del Día
+2. ✅ ~~Tarea 5: Checkpoint - Verificar que todo funciona~~ (COMPLETADO)
+3. ✅ ~~Commit de Fase 2, 3 y Tests~~ (COMPLETADO)
+4. **SIGUIENTE:** Continuar con Fase 4: Pantalla Principal - Ruta del Día
+   - Tarea 7: Implementar hook useRuta
+   - Tarea 8: Crear pantalla RutaDelDia
+   - Tarea 9: Implementar componente ClienteCard
 
 ---
 
@@ -245,7 +248,7 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 
 ## 🔄 Git Commits Realizados
 
-### Pendiente - Commit 5: Fix tests and complete Phase 2-3
+### ✅ Commit 5: Fix tests and complete Phase 2-3 (COMPLETADO)
 ```bash
 # Agregar todos los archivos modificados
 git add .
@@ -510,16 +513,17 @@ git push origin main
 
 ### Implementación:
 - Tareas completadas: 6/28 (21%)
-- Sub-tareas completadas: 11/67 (16%)
+- Sub-tareas completadas: 14/67 (21%)
 - Fase 1: COMPLETA ✅ (2/2 tareas)
 - Fase 2: COMPLETA ✅ (2/2 tareas)
-- Fase 3: COMPLETA ✅ (1/1 tarea)
+- Fase 3: COMPLETA ✅ (2/2 tareas)
 - Tests escritos: 21 tests (18 unit + 3 property-based) ✅
 - Tests pasando: 21/21 (100%) ✅
+- **Próxima fase:** Fase 4 - Pantalla Principal (Ruta del Día)
 
 ### Commits:
-- Total commits: 0 (pendiente primer commit)
-- Último commit: N/A
+- Total commits: 5
+- Último commit: d537747 - "test: fix all tests and complete phase 2-3 implementation"
 
 ---
 
