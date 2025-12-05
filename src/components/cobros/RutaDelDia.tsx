@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useRuta } from '../../hooks/useRuta';
 import { ClienteCard } from './ClienteCard';
+import { RegistrarPago } from './RegistrarPago';
 import type { ClienteRuta } from '../../types';
 
 export function RutaDelDia() {
@@ -20,6 +21,9 @@ export function RutaDelDia() {
   // Manejar drag & drop
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
+    
+    // Si no cambió de posición, no hacer nada
+    if (result.destination.index === result.source.index) return;
 
     const items = Array.from(rutaDelDia);
     const [reorderedItem] = items.splice(result.source.index, 1);
@@ -28,6 +32,8 @@ export function RutaDelDia() {
     // Actualizar orden
     const nuevoOrden = items.map((item) => item.cliente.id);
     reordenarRuta(nuevoOrden);
+    
+    console.log('✅ Ruta reordenada:', nuevoOrden);
   };
 
   // Formatear montos
@@ -173,15 +179,27 @@ export function RutaDelDia() {
                     draggableId={clienteRuta.cliente.id}
                     index={index}
                   >
-                    {(provided) => (
+                    {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
+                        style={{
+                          ...provided.draggableProps.style,
+                          opacity: snapshot.isDragging ? 0.8 : 1,
+                          transform: snapshot.isDragging 
+                            ? `${provided.draggableProps.style?.transform} rotate(2deg)` 
+                            : provided.draggableProps.style?.transform,
+                        }}
                       >
                         <ClienteCard
                           clienteRuta={clienteRuta}
-                          onClick={() => setClienteSeleccionado(clienteRuta)}
+                          onClick={() => {
+                            // Prevenir click durante drag
+                            if (!snapshot.isDragging) {
+                              setClienteSeleccionado(clienteRuta);
+                            }
+                          }}
                         />
                       </div>
                     )}
@@ -194,22 +212,16 @@ export function RutaDelDia() {
         </DragDropContext>
       </div>
 
-      {/* TODO: Modal de Registro de Pago */}
+      {/* Modal de Registro de Pago */}
       {clienteSeleccionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Registrar Pago</h2>
-            <p className="text-gray-600 mb-4">
-              Cliente: {clienteSeleccionado.cliente.nombre}
-            </p>
-            <button
-              onClick={() => setClienteSeleccionado(null)}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
+        <RegistrarPago
+          clienteRuta={clienteSeleccionado}
+          onClose={() => setClienteSeleccionado(null)}
+          onSuccess={() => {
+            console.log('✅ Pago registrado exitosamente');
+            // La UI se actualizará automáticamente gracias a useLiveQuery
+          }}
+        />
       )}
     </div>
   );

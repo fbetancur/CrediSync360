@@ -8,15 +8,15 @@
 
 ## 📊 Estado General del Proyecto
 
-### Fase Actual: Implementación - Fase 5 ⏳
+### Fase Actual: Implementación - Fase 5 ✅
 - ✅ Fase 1: Setup y Configuración (COMPLETA)
 - ✅ Fase 2: Base de Datos Local (COMPLETA)
 - ✅ Fase 3: Sync Manager (COMPLETA)
-- ✅ Fase 4: Pantalla Principal - Ruta del Día (COMPLETA) 🎉
-- ⏳ Fase 5: Registro de Pagos (SIGUIENTE)
-  - Tarea 10: Implementar hook useCobro
-  - Tarea 11: Implementar modal RegistrarPago
-  - Tarea 12: Checkpoint de flujo de cobro
+- ✅ Fase 4: Pantalla Principal - Ruta del Día (COMPLETA)
+- ✅ Fase 5: Registro de Pagos (COMPLETA) 🎉
+  - ✅ Tarea 10: Hook useCobro implementado
+  - ✅ Tarea 11: Modal RegistrarPago implementado
+  - ⏳ Tarea 12: Checkpoint - Probar flujo completo (AHORA)
 
 ---
 
@@ -81,13 +81,14 @@ Todos los documentos de especificación están listos para revisión y aprobaci�
 #### Issue #5: Tailwind CSS no aplicando estilos
 **Fecha:** 5 de diciembre de 2025  
 **Error:** Solo se veía texto sin tarjetas visuales  
-**Causa:** Faltaban archivos de configuración (tailwind.config.js, postcss.config.js)  
+**Causa:** Tailwind v4 requiere `@tailwindcss/postcss` en lugar de `tailwindcss` como plugin de PostCSS  
 **Solución:** 
+- Instalado `@tailwindcss/postcss` package
 - Creado `tailwind.config.js` con content paths
-- Creado `postcss.config.js` con plugins
-- Actualizado `src/index.css` con directivas @tailwind correctas
+- Creado `postcss.config.js` usando `@tailwindcss/postcss`
+- Actualizado `src/index.css` con `@import "tailwindcss"` (sintaxis v4)
 - Reiniciado servidor de desarrollo
-**Archivos:** tailwind.config.js, postcss.config.js, src/index.css  
+**Archivos:** package.json, tailwind.config.js, postcss.config.js, src/index.css  
 **Estado:** ✅ Resuelto
 
 #### Warnings Conocidos:

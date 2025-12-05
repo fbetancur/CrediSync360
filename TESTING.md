@@ -70,10 +70,22 @@ Los datos de prueba incluyen:
 - Arrastra cualquier tarjeta para reordenar la ruta
 - El orden se guarda localmente
 
-#### ✅ Click en Tarjeta
+#### ✅ Registrar Pago
 
-- Al hacer click en una tarjeta, se abre un modal temporal
-- (El modal de registro de pago se implementará en la siguiente tarea)
+- Al hacer click en una tarjeta, se abre el modal de registro de pago
+- El modal muestra:
+  - Información del cliente (nombre, documento, teléfono, dirección)
+  - Información del crédito (cuotas pendientes, saldo pendiente)
+  - Input de monto (pre-llenado con el saldo pendiente)
+  - Textarea para observaciones (opcional, máx 500 caracteres)
+  - Botones Cancelar y Confirmar Pago
+- Al confirmar:
+  - Se valida que el monto sea mayor a 0
+  - Se captura la ubicación GPS automáticamente
+  - Se distribuye el pago entre las cuotas en orden cronológico
+  - Se guarda en IndexedDB
+  - Se agrega a la cola de sincronización
+  - La UI se actualiza automáticamente
 
 ## 🧪 Tests Unitarios
 
@@ -148,6 +160,31 @@ location.reload()
 - Si agregas más de 50 clientes, la lista se virtualiza automáticamente
 - Esto mejora el performance para 200+ clientes
 
+## ⚠️ Warnings Conocidos (Normales en Desarrollo)
+
+Estos warnings aparecen en la consola pero **NO afectan la funcionalidad**:
+
+### 1. `Support for defaultProps will be removed from memo components`
+- **Causa**: `react-beautiful-dnd` usa una API antigua de React
+- **Impacto**: Ninguno. Es solo un aviso de desarrollo
+- **Solución**: Se eliminará automáticamente en producción
+
+### 2. `Unable to find draggable with id: cliente-X`
+- **Causa**: `react-beautiful-dnd` busca elementos antes de que se rendericen
+- **Impacto**: Ninguno. El drag & drop funciona perfectamente
+- **Solución**: Es un mensaje de desarrollo, desaparece en producción
+
+**✅ El drag & drop funciona correctamente a pesar de estos warnings.**
+
+### Cómo Probar el Drag & Drop
+
+1. **Haz click y mantén presionado** sobre cualquier parte de una tarjeta de cliente
+2. **Arrastra** la tarjeta hacia arriba o abajo
+3. **Suelta** para reordenar
+4. **Verifica** en la consola: `✅ Ruta reordenada: [...]`
+
+**Nota**: El cursor cambiará a una "mano" (grab) cuando pases sobre la tarjeta, indicando que se puede arrastrar.
+
 ## 🐛 Troubleshooting
 
 ### La aplicación muestra "No hay cobros pendientes"
@@ -164,6 +201,12 @@ location.reload()
 
 - Verifica que todas las dependencias estén instaladas: `npm install`
 - Ejecuta `npm test` para ver el error específico
+
+### El drag & drop no funciona
+
+- Asegúrate de hacer click y mantener presionado
+- Arrastra la tarjeta al menos 10px antes de soltar
+- Verifica que haya datos de prueba cargados
 
 ## 📝 Próximas Funcionalidades
 

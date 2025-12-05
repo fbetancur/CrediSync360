@@ -35,9 +35,8 @@ export function ClienteCard({ clienteRuta, onClick }: ClienteCardProps) {
       onClick={onClick}
       className={`
         ${estadoColor}
-        border-2 rounded-lg p-4 cursor-pointer
+        border-2 rounded-lg p-4 cursor-grab active:cursor-grabbing
         hover:shadow-md transition-shadow
-        active:scale-98 transition-transform
       `}
     >
       {/* Header: Nombre y Estado */}
