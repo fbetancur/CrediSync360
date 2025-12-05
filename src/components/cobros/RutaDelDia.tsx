@@ -8,7 +8,6 @@
  */
 
 import { useState } from 'react';
-import { FixedSizeList } from 'react-window';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useRuta } from '../../hooks/useRuta';
 import { ClienteCard } from './ClienteCard';
@@ -159,100 +158,40 @@ export function RutaDelDia() {
       </div>
 
       {/* Lista de Clientes */}
-      <div className="flex-1 overflow-hidden">
-        {rutaDelDia.length > 50 ? (
-          // Virtualización para listas grandes (> 50 items)
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable
-              droppableId="ruta-list"
-              mode="virtual"
-              renderClone={(provided, _snapshot, rubric) => (
-                <div
-                  {...provided.draggableProps}
-                  {...provided.dragHandleProps}
-                  ref={provided.innerRef}
-                  className="p-2"
-                >
-                  <ClienteCard
-                    clienteRuta={rutaDelDia[rubric.source.index]}
-                    onClick={() => setClienteSeleccionado(rutaDelDia[rubric.source.index])}
-                  />
-                </div>
-              )}
-            >
-              {(provided) => (
-                <FixedSizeList
-                  height={window.innerHeight - 200}
-                  itemCount={rutaDelDia.length}
-                  itemSize={180}
-                  width="100%"
-                  outerRef={provided.innerRef}
-                >
-                  {({ index, style }: { index: number; style: React.CSSProperties }) => {
-                    const clienteRuta = rutaDelDia[index];
-                    return (
-                      <Draggable
-                        draggableId={clienteRuta.cliente.id}
-                        index={index}
-                        key={clienteRuta.cliente.id}
+      <div className="flex-1 overflow-auto">
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="ruta-list">
+            {(provided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="p-4 space-y-3"
+              >
+                {rutaDelDia.map((clienteRuta, index) => (
+                  <Draggable
+                    key={clienteRuta.cliente.id}
+                    draggableId={clienteRuta.cliente.id}
+                    index={index}
+                  >
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
                       >
-                        {(provided) => (
-                          <div
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            ref={provided.innerRef}
-                            style={{ ...style, ...provided.draggableProps.style }}
-                            className="p-2"
-                          >
-                            <ClienteCard
-                              clienteRuta={clienteRuta}
-                              onClick={() => setClienteSeleccionado(clienteRuta)}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    );
-                  }}
-                </FixedSizeList>
-              )}
-            </Droppable>
-          </DragDropContext>
-        ) : (
-          // Lista simple para listas pequeñas (<= 50 items)
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="ruta-list">
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="p-4 space-y-3"
-                >
-                  {rutaDelDia.map((clienteRuta, index) => (
-                    <Draggable
-                      key={clienteRuta.cliente.id}
-                      draggableId={clienteRuta.cliente.id}
-                      index={index}
-                    >
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <ClienteCard
-                            clienteRuta={clienteRuta}
-                            onClick={() => setClienteSeleccionado(clienteRuta)}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
-        )}
+                        <ClienteCard
+                          clienteRuta={clienteRuta}
+                          onClick={() => setClienteSeleccionado(clienteRuta)}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
 
       {/* TODO: Modal de Registro de Pago */}
