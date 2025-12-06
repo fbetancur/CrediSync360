@@ -4,18 +4,41 @@ import { ClientesList } from './components/clientes/ClientesList';
 import { Balance } from './components/balance/Balance';
 import { ProductosList } from './components/productos/ProductosList';
 import { SyncIndicator } from './components/sync/SyncIndicator';
-import { startSync, stopSync } from './lib/sync';
+import { startSync, stopSync, downloadFromAWS } from './lib/sync';
 import './lib/seedData'; // Importar para que esté disponible en window
 
 type Screen = 'cobros' | 'clientes' | 'balance' | 'productos';
 
+// TODO: Obtener del AuthContext en Fase 9
+const TENANT_ID = 'tenant-1';
+const RUTA_ID = 'ruta-default'; // Para cobradores
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('cobros');
+  const [isInitialSyncComplete, setIsInitialSyncComplete] = useState(false);
 
-  // Iniciar sincronización automática al montar el componente
+  // Descarga inicial y sincronización automática
   useEffect(() => {
-    console.log('[App] Iniciando sincronización automática...');
-    startSync();
+    async function initializeApp() {
+      console.log('[App] Iniciando descarga inicial desde AWS...');
+      
+      // Descargar datos de AWS al iniciar
+      const result = await downloadFromAWS(TENANT_ID, RUTA_ID);
+      
+      if (result.success) {
+        console.log('[App] Descarga inicial completada:', result.downloaded);
+      } else {
+        console.error('[App] Error en descarga inicial:', result.error);
+      }
+      
+      setIsInitialSyncComplete(true);
+
+      // Iniciar sincronización automática (subida)
+      console.log('[App] Iniciando sincronización automática...');
+      startSync();
+    }
+
+    initializeApp();
 
     // Limpiar al desmontar
     return () => {
@@ -23,6 +46,19 @@ function App() {
       stopSync();
     };
   }, []);
+
+  // Mostrar pantalla de carga durante la descarga inicial
+  if (!isInitialSyncComplete) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-blue-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-700">Sincronizando datos...</p>
+          <p className="text-sm text-gray-500 mt-2">Descargando información desde el servidor</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">

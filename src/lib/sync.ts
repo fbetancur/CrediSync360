@@ -404,6 +404,256 @@ export async function cleanupSyncedItems(): Promise<number> {
 }
 
 // ============================================================================
+// Descarga desde AWS (Sincronización Bidireccional)
+// ============================================================================
+
+/**
+ * Descargar datos desde AWS y guardar en IndexedDB
+ * 
+ * @param tenantId - ID del tenant
+ * @param rutaId - ID de la ruta (opcional, para cobradores)
+ */
+export async function downloadFromAWS(tenantId: string, rutaId?: string): Promise<{
+  success: boolean;
+  downloaded: {
+    rutas: number;
+    clientes: number;
+    creditos: number;
+    cuotas: number;
+    pagos: number;
+    productos: number;
+  };
+  error?: string;
+}> {
+  try {
+    console.log('[Sync] Downloading from AWS...', { tenantId, rutaId });
+
+    const downloaded = {
+      rutas: 0,
+      clientes: 0,
+      creditos: 0,
+      cuotas: 0,
+      pagos: 0,
+      productos: 0,
+    };
+
+    // 1. Descargar Rutas
+    const { data: rutasAWS } = await client.models.Ruta.list({
+      filter: { tenantId: { eq: tenantId } },
+    });
+
+    if (rutasAWS) {
+      for (const ruta of rutasAWS) {
+        await db.rutas.put({
+          id: ruta.id,
+          tenantId: ruta.tenantId,
+          nombre: ruta.nombre,
+          supervisorId: ruta.supervisorId,
+          activa: ruta.activa,
+          createdAt: ruta.createdAt || new Date().toISOString(),
+          createdBy: 'aws-sync',
+        });
+        downloaded.rutas++;
+      }
+    }
+
+    // 2. Descargar Productos de Crédito
+    const { data: productosAWS } = await client.models.ProductoCredito.list({
+      filter: { tenantId: { eq: tenantId } },
+    });
+
+    if (productosAWS) {
+      for (const producto of productosAWS) {
+        await db.productos.put({
+          id: producto.id,
+          tenantId: producto.tenantId,
+          nombre: producto.nombre,
+          interesPorcentaje: producto.interesPorcentaje,
+          numeroCuotas: producto.numeroCuotas,
+          frecuencia: producto.frecuencia as any,
+          excluirDomingos: producto.excluirDomingos,
+          montoMinimo: producto.montoMinimo || undefined,
+          montoMaximo: producto.montoMaximo || undefined,
+          activo: producto.activo,
+          createdAt: producto.createdAt || new Date().toISOString(),
+          createdBy: 'aws-sync',
+        });
+        downloaded.productos++;
+      }
+    }
+
+    // 3. Descargar Clientes (filtrar por ruta si es cobrador)
+    const clientesFilter: any = { tenantId: { eq: tenantId } };
+    if (rutaId) {
+      clientesFilter.rutaId = { eq: rutaId };
+    }
+
+    const { data: clientesAWS } = await client.models.Cliente.list({
+      filter: clientesFilter,
+    });
+
+    if (clientesAWS) {
+      for (const cliente of clientesAWS) {
+        await db.clientes.put({
+          id: cliente.id,
+          tenantId: cliente.tenantId,
+          rutaId: cliente.rutaId,
+          nombre: cliente.nombre,
+          documento: cliente.documento,
+          telefono: cliente.telefono,
+          direccion: cliente.direccion,
+          barrio: cliente.barrio || '',
+          referencia: cliente.referencia || '',
+          latitud: cliente.latitud || undefined,
+          longitud: cliente.longitud || undefined,
+          creditosActivos: cliente.creditosActivos,
+          saldoTotal: cliente.saldoTotal,
+          diasAtrasoMax: cliente.diasAtrasoMax,
+          estado: cliente.estado as any,
+          score: cliente.score as any,
+          ultimaActualizacion: cliente.ultimaActualizacion,
+          createdAt: cliente.createdAt || new Date().toISOString(),
+          createdBy: 'aws-sync',
+        });
+        downloaded.clientes++;
+      }
+    }
+
+    // 4. Descargar Créditos (filtrar por ruta si es cobrador)
+    const creditosFilter: any = { tenantId: { eq: tenantId } };
+    if (rutaId) {
+      creditosFilter.rutaId = { eq: rutaId };
+    }
+
+    const { data: creditosAWS } = await client.models.Credito.list({
+      filter: creditosFilter,
+    });
+
+    if (creditosAWS) {
+      for (const credito of creditosAWS) {
+        await db.creditos.put({
+          id: credito.id,
+          tenantId: credito.tenantId,
+          rutaId: credito.rutaId,
+          clienteId: credito.clienteId,
+          productoId: credito.productoId,
+          cobradorId: credito.cobradorId,
+          montoOriginal: credito.montoOriginal,
+          interesPorcentaje: credito.interesPorcentaje,
+          totalAPagar: credito.totalAPagar,
+          numeroCuotas: credito.numeroCuotas,
+          valorCuota: credito.valorCuota,
+          frecuencia: credito.frecuencia as any,
+          fechaDesembolso: credito.fechaDesembolso,
+          fechaPrimeraCuota: credito.fechaPrimeraCuota,
+          fechaUltimaCuota: credito.fechaUltimaCuota,
+          estado: credito.estado as any,
+          saldoPendiente: credito.saldoPendiente,
+          cuotasPagadas: credito.cuotasPagadas,
+          diasAtraso: credito.diasAtraso,
+          ultimaActualizacion: credito.ultimaActualizacion,
+          createdAt: credito.createdAt || new Date().toISOString(),
+          createdBy: 'aws-sync', // AWS no tiene este campo, lo asignamos localmente
+        });
+        downloaded.creditos++;
+      }
+    }
+
+    // 5. Descargar Cuotas (filtrar por ruta si es cobrador)
+    const cuotasFilter: any = { tenantId: { eq: tenantId } };
+    if (rutaId) {
+      cuotasFilter.rutaId = { eq: rutaId };
+    }
+
+    const { data: cuotasAWS } = await client.models.Cuota.list({
+      filter: cuotasFilter,
+    });
+
+    if (cuotasAWS) {
+      for (const cuota of cuotasAWS) {
+        await db.cuotas.put({
+          id: cuota.id,
+          tenantId: cuota.tenantId,
+          rutaId: cuota.rutaId,
+          creditoId: cuota.creditoId,
+          clienteId: cuota.clienteId,
+          cobradorId: cuota.cobradorId,
+          numero: cuota.numero,
+          fechaProgramada: cuota.fechaProgramada,
+          montoProgramado: cuota.montoProgramado,
+          montoPagado: cuota.montoPagado,
+          saldoPendiente: cuota.saldoPendiente,
+          estado: cuota.estado as any,
+          diasAtraso: cuota.diasAtraso,
+          ultimaActualizacion: cuota.ultimaActualizacion,
+          createdAt: cuota.createdAt || new Date().toISOString(),
+          createdBy: 'aws-sync', // AWS no tiene este campo, lo asignamos localmente
+        });
+        downloaded.cuotas++;
+      }
+    }
+
+    // 6. Descargar Pagos (filtrar por ruta si es cobrador)
+    const pagosFilter: any = { tenantId: { eq: tenantId } };
+    if (rutaId) {
+      pagosFilter.rutaId = { eq: rutaId };
+    }
+
+    const { data: pagosAWS } = await client.models.Pago.list({
+      filter: pagosFilter,
+    });
+
+    if (pagosAWS) {
+      for (const pago of pagosAWS) {
+        await db.pagos.put({
+          id: pago.id,
+          tenantId: pago.tenantId,
+          rutaId: pago.rutaId,
+          creditoId: pago.creditoId,
+          cuotaId: pago.cuotaId,
+          clienteId: pago.clienteId,
+          cobradorId: pago.cobradorId,
+          monto: pago.monto,
+          fecha: pago.fecha,
+          latitud: pago.latitud || undefined,
+          longitud: pago.longitud || undefined,
+          observaciones: pago.observaciones || undefined,
+          createdAt: pago.createdAt || new Date().toISOString(),
+          createdBy: 'aws-sync', // AWS no tiene este campo, lo asignamos localmente
+        });
+        downloaded.pagos++;
+      }
+    }
+
+    console.log('[Sync] Download complete:', downloaded);
+
+    return { success: true, downloaded };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[Sync] Error downloading from AWS:', error);
+    return { success: false, downloaded: { rutas: 0, clientes: 0, creditos: 0, cuotas: 0, pagos: 0, productos: 0 }, error: errorMessage };
+  }
+}
+
+/**
+ * Sincronización completa: subir cambios locales y descargar cambios remotos
+ * 
+ * @param tenantId - ID del tenant
+ * @param rutaId - ID de la ruta (opcional, para cobradores)
+ */
+export async function fullSync(tenantId: string, rutaId?: string): Promise<void> {
+  console.log('[Sync] Starting full sync...');
+
+  // 1. Subir cambios locales pendientes
+  await processSyncQueue();
+
+  // 2. Descargar cambios remotos
+  await downloadFromAWS(tenantId, rutaId);
+
+  console.log('[Sync] Full sync complete');
+}
+
+// ============================================================================
 // Resolución de Conflictos
 // ============================================================================
 
@@ -437,4 +687,6 @@ export default {
   retryFailedItems,
   cleanupSyncedItems,
   resolveConflict,
+  downloadFromAWS,
+  fullSync,
 };
