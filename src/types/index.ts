@@ -14,14 +14,26 @@ export type EstadoCuota = 'PENDIENTE' | 'PARCIAL' | 'PAGADA';
 export type EstadoCliente = 'SIN_CREDITOS' | 'AL_DIA' | 'MORA';
 export type Score = 'CONFIABLE' | 'REGULAR' | 'RIESGOSO';
 export type SyncStatus = 'PENDING' | 'SYNCED' | 'FAILED';
+export type UserRole = 'ADMIN' | 'SUPERVISOR' | 'COBRADOR';
 
 // ============================================================================
 // Entidades Base
 // ============================================================================
 
+export interface Ruta {
+  id: string;
+  tenantId: string;
+  nombre: string;
+  supervisorId: string;
+  activa: boolean;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface Cliente {
   id: string;
   tenantId: string;
+  rutaId: string;
   nombre: string;
   documento: string;
   telefono: string;
@@ -59,6 +71,7 @@ export interface ProductoCredito {
 export interface Credito {
   id: string;
   tenantId: string;
+  rutaId: string;
   clienteId: string;
   productoId: string;
   cobradorId: string;
@@ -88,8 +101,10 @@ export interface Credito {
 export interface Cuota {
   id: string;
   tenantId: string;
+  rutaId: string;
   creditoId: string;
   clienteId: string;
+  cobradorId: string;
   // Datos de la cuota
   numero: number;
   fechaProgramada: string; // YYYY-MM-DD
@@ -108,6 +123,7 @@ export interface Cuota {
 export interface Pago {
   id: string;
   tenantId: string;
+  rutaId: string;
   creditoId: string;
   cuotaId: string;
   clienteId: string;
@@ -128,6 +144,7 @@ export interface Pago {
 export interface CierreCaja {
   id: string;
   tenantId: string;
+  rutaId: string;
   cobradorId: string;
   fecha: string; // YYYY-MM-DD
   // Datos del cierre
@@ -149,6 +166,7 @@ export interface CierreCaja {
 export interface MovimientoCaja {
   id: string;
   tenantId: string;
+  rutaId: string;
   cobradorId: string;
   fecha: string; // YYYY-MM-DD
   tipo: 'ENTRADA' | 'GASTO';
@@ -174,10 +192,12 @@ export interface EstadoCaja {
 // ============================================================================
 
 export type SyncOperationType = 
+  | 'CREATE_RUTA'
   | 'CREATE_CLIENTE' 
   | 'CREATE_CREDITO' 
   | 'CREATE_PAGO' 
-  | 'CREATE_CIERRE';
+  | 'CREATE_CIERRE'
+  | 'CREATE_MOVIMIENTO';
 
 export interface SyncQueueItem {
   id?: number; // Auto-increment

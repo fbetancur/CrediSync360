@@ -84,6 +84,7 @@ export async function seedDatabase() {
     {
       id: 'cliente-1',
       tenantId,
+      rutaId: 'ruta-default',
       nombre: 'María García',
       documento: '1234567890',
       telefono: '3001234567',
@@ -102,6 +103,7 @@ export async function seedDatabase() {
     {
       id: 'cliente-2',
       tenantId,
+      rutaId: 'ruta-default',
       nombre: 'Juan Pérez',
       documento: '0987654321',
       telefono: '3009876543',
@@ -120,6 +122,7 @@ export async function seedDatabase() {
     {
       id: 'cliente-3',
       tenantId,
+      rutaId: 'ruta-default',
       nombre: 'Ana Rodríguez',
       documento: '1122334455',
       telefono: '3001122334',
@@ -138,6 +141,7 @@ export async function seedDatabase() {
     {
       id: 'cliente-4',
       tenantId,
+      rutaId: 'ruta-default',
       nombre: 'Carlos López',
       documento: '5544332211',
       telefono: '3005544332',
@@ -156,6 +160,7 @@ export async function seedDatabase() {
     {
       id: 'cliente-5',
       tenantId,
+      rutaId: 'ruta-default',
       nombre: 'Laura Martínez',
       documento: '6677889900',
       telefono: '3006677889',
@@ -184,6 +189,7 @@ export async function seedDatabase() {
     const credito: Credito = {
       id: creditoId,
       tenantId,
+      rutaId: 'ruta-default',
       clienteId: cliente.id,
       productoId: producto.id,
       cobradorId: userId,
@@ -225,8 +231,10 @@ export async function seedDatabase() {
       cuotas.push({
         id: `cuota-${i + 1}-${j + 1}`,
         tenantId,
+        rutaId: 'ruta-default',
         creditoId,
         clienteId: cliente.id,
+        cobradorId: userId,
         numero: j + 1,
         fechaProgramada: format(fechaCuota, 'yyyy-MM-dd'),
         montoProgramado: 30000,

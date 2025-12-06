@@ -8,10 +8,26 @@ import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
  */
 
 const schema = a.schema({
+  // Modelo: Ruta
+  Ruta: a
+    .model({
+      tenantId: a.string().required(),
+      nombre: a.string().required(),
+      supervisorId: a.string().required(),
+      activa: a.boolean().required(),
+      // Relaciones
+      clientes: a.hasMany("Cliente", "rutaId"),
+      creditos: a.hasMany("Credito", "rutaId"),
+    })
+    .authorization((allow) => [
+      allow.publicApiKey(),
+    ]),
+
   // Modelo: Cliente
   Cliente: a
     .model({
       tenantId: a.string().required(),
+      rutaId: a.id().required(),
       nombre: a.string().required(),
       documento: a.string().required(),
       telefono: a.string().required(),
@@ -20,7 +36,15 @@ const schema = a.schema({
       referencia: a.string(),
       latitud: a.float(),
       longitud: a.float(),
+      // Campos calculados (optimización)
+      creditosActivos: a.integer().required(),
+      saldoTotal: a.float().required(),
+      diasAtrasoMax: a.integer().required(),
+      estado: a.enum(["SIN_CREDITOS", "AL_DIA", "MORA"]),
+      score: a.enum(["CONFIABLE", "REGULAR", "RIESGOSO"]),
+      ultimaActualizacion: a.datetime().required(),
       // Relaciones
+      ruta: a.belongsTo("Ruta", "rutaId"),
       creditos: a.hasMany("Credito", "clienteId"),
     })
     .authorization((allow) => [
@@ -48,6 +72,7 @@ const schema = a.schema({
   Credito: a
     .model({
       tenantId: a.string().required(),
+      rutaId: a.id().required(),
       clienteId: a.id().required(),
       productoId: a.id().required(),
       cobradorId: a.string().required(),
@@ -64,7 +89,13 @@ const schema = a.schema({
       fechaUltimaCuota: a.date().required(),
       // Estado
       estado: a.enum(["ACTIVO", "CANCELADO", "CASTIGADO"]),
+      // Campos calculados (optimización)
+      saldoPendiente: a.float().required(),
+      cuotasPagadas: a.integer().required(),
+      diasAtraso: a.integer().required(),
+      ultimaActualizacion: a.datetime().required(),
       // Relaciones
+      ruta: a.belongsTo("Ruta", "rutaId"),
       cliente: a.belongsTo("Cliente", "clienteId"),
       cuotas: a.hasMany("Cuota", "creditoId"),
       pagos: a.hasMany("Pago", "creditoId"),
@@ -77,13 +108,22 @@ const schema = a.schema({
   Cuota: a
     .model({
       tenantId: a.string().required(),
+      rutaId: a.id().required(),
       creditoId: a.id().required(),
       clienteId: a.id().required(),
+      cobradorId: a.string().required(),
       // Datos de la cuota
       numero: a.integer().required(),
       fechaProgramada: a.date().required(),
       montoProgramado: a.float().required(),
+      // Campos calculados (optimización)
+      montoPagado: a.float().required(),
+      saldoPendiente: a.float().required(),
+      estado: a.enum(["PENDIENTE", "PARCIAL", "PAGADA"]),
+      diasAtraso: a.integer().required(),
+      ultimaActualizacion: a.datetime().required(),
       // Relaciones
+      ruta: a.belongsTo("Ruta", "rutaId"),
       credito: a.belongsTo("Credito", "creditoId"),
       pagos: a.hasMany("Pago", "cuotaId"),
     })
@@ -95,6 +135,7 @@ const schema = a.schema({
   Pago: a
     .model({
       tenantId: a.string().required(),
+      rutaId: a.id().required(),
       creditoId: a.id().required(),
       cuotaId: a.id().required(),
       clienteId: a.id().required(),
@@ -108,6 +149,7 @@ const schema = a.schema({
       // Observaciones
       observaciones: a.string(),
       // Relaciones
+      ruta: a.belongsTo("Ruta", "rutaId"),
       credito: a.belongsTo("Credito", "creditoId"),
       cuota: a.belongsTo("Cuota", "cuotaId"),
     })
@@ -120,15 +162,39 @@ const schema = a.schema({
   CierreCaja: a
     .model({
       tenantId: a.string().required(),
+      rutaId: a.id().required(),
       cobradorId: a.string().required(),
       fecha: a.date().required(),
       // Datos del cierre
+      cajaBase: a.float().required(),
       totalCobrado: a.float().required(),
+      totalCreditosOtorgados: a.float().required(),
+      totalEntradas: a.float().required(),
+      totalGastos: a.float().required(),
+      totalCaja: a.float().required(),
       cuotasCobradas: a.integer().required(),
       cuotasTotales: a.integer().required(),
       clientesVisitados: a.integer().required(),
-      efectivoEnMano: a.float().required(),
       observaciones: a.string(),
+      // Relaciones
+      ruta: a.belongsTo("Ruta", "rutaId"),
+    })
+    .authorization((allow) => [
+      allow.publicApiKey(),
+    ]),
+
+  // Modelo: Movimiento de Caja
+  MovimientoCaja: a
+    .model({
+      tenantId: a.string().required(),
+      rutaId: a.id().required(),
+      cobradorId: a.string().required(),
+      fecha: a.date().required(),
+      tipo: a.enum(["ENTRADA", "GASTO"]),
+      detalle: a.string().required(),
+      valor: a.float().required(),
+      // Relaciones
+      ruta: a.belongsTo("Ruta", "rutaId"),
     })
     .authorization((allow) => [
       allow.publicApiKey(),

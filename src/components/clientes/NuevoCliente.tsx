@@ -121,6 +121,7 @@ export function NuevoCliente({ onClose, onSuccess }: NuevoClienteProps) {
       const cliente: Cliente = {
         id: clienteId,
         tenantId: 'tenant-1', // TODO: Obtener del contexto de autenticación
+        rutaId: 'ruta-default', // TODO: Obtener del contexto de autenticación
         nombre: formData.nombre.trim(),
         documento: formData.documento.trim(),
         telefono: formData.telefono.trim(),

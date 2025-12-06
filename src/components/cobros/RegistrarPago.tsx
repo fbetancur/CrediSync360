@@ -74,6 +74,7 @@ export function RegistrarPago({ clienteRuta, onClose, onSuccess }: RegistrarPago
       for (const dist of distribucion) {
         await registrarPago({
           tenantId: cliente.tenantId,
+          rutaId: cliente.rutaId,
           creditoId: credito.id,
           cuotaId: dist.cuotaId,
           clienteId: cliente.id,

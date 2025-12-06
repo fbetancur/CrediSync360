@@ -21,8 +21,10 @@ function createCuota(id: string, numero: number, monto: number, fecha: string): 
   return {
     id,
     tenantId: 'test-tenant',
+    rutaId: 'test-ruta',
     creditoId: 'test-credito',
     clienteId: 'test-cliente',
+    cobradorId: 'test-cobrador',
     numero,
     fechaProgramada: fecha,
     montoProgramado: monto,
@@ -41,6 +43,7 @@ function createPago(id: string, cuotaId: string, monto: number): Pago {
   return {
     id,
     tenantId: 'test-tenant',
+    rutaId: 'test-ruta',
     creditoId: 'test-credito',
     cuotaId,
     clienteId: 'test-cliente',

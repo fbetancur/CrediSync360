@@ -115,6 +115,7 @@ export function useCredito(): UseCreditoReturn {
       const credito: Credito = {
         id: creditoId,
         tenantId: 'tenant-1', // TODO: Obtener del contexto de autenticación
+        rutaId: 'ruta-default', // TODO: Obtener del contexto de autenticación
         clienteId: params.clienteId,
         productoId: params.productoId,
         cobradorId: 'user-1', // TODO: Obtener del contexto de autenticación
@@ -141,8 +142,10 @@ export function useCredito(): UseCreditoReturn {
       const cuotas: Cuota[] = fechasCuotas.map((fecha, index) => ({
         id: `cuota-${creditoId}-${index + 1}`,
         tenantId: 'tenant-1',
+        rutaId: 'ruta-default', // TODO: Obtener del contexto de autenticación
         creditoId,
         clienteId: params.clienteId,
+        cobradorId: 'user-1', // TODO: Obtener del contexto de autenticación
         numero: index + 1,
         fechaProgramada: fecha,
         montoProgramado: valorCuota,

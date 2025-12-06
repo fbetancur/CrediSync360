@@ -123,6 +123,7 @@ export function useBalance() {
       const movimiento: MovimientoCaja = {
         id: `mov-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         tenantId: TENANT_ID,
+        rutaId: 'ruta-default', // TODO: Obtener del contexto de autenticación
         cobradorId: COBRADOR_ID,
         fecha: hoy,
         tipo,
@@ -193,6 +194,7 @@ export function useBalance() {
       const cierre = {
         id: `cierre-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         tenantId: TENANT_ID,
+        rutaId: 'ruta-default', // TODO: Obtener del contexto de autenticación
         cobradorId: COBRADOR_ID,
         fecha: hoy,
         cajaBase: estadoCaja.cajaBase,

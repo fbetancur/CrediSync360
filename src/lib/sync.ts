@@ -73,6 +73,10 @@ async function processSyncItem(item: SyncQueueItem): Promise<{ success: boolean;
     console.log(`[Sync] Processing: ${item.type}`, item.data);
 
     switch (item.type) {
+      case 'CREATE_RUTA':
+        await client.models.Ruta.create(item.data);
+        break;
+
       case 'CREATE_CLIENTE':
         await client.models.Cliente.create(item.data);
         break;
@@ -93,6 +97,10 @@ async function processSyncItem(item: SyncQueueItem): Promise<{ success: boolean;
 
       case 'CREATE_CIERRE':
         await client.models.CierreCaja.create(item.data);
+        break;
+
+      case 'CREATE_MOVIMIENTO':
+        await client.models.MovimientoCaja.create(item.data);
         break;
 
       default:
