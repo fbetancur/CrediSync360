@@ -120,20 +120,19 @@ export async function actualizarCamposCredito(creditoId: string): Promise<void> 
     const pagos = await db.pagos.where('creditoId').equals(creditoId).toArray();
 
     // Calcular estado
-    const estado = calcularEstadoCredito(credito, cuotas, pagos);
+    const estadoCalculado = calcularEstadoCredito(credito, cuotas, pagos);
 
-    // Actualizar campos calculados
+    // Actualizar campos calculados (NO actualizar campo 'estado' del modelo)
     await db.creditos.update(creditoId, {
-      saldoPendiente: estado.saldoPendiente,
-      cuotasPagadas: estado.cuotasPagadas,
-      diasAtraso: estado.diasAtraso,
-      estado: estado.estadoCalculado,
+      saldoPendiente: estadoCalculado.saldoPendiente,
+      cuotasPagadas: estadoCalculado.cuotasPagadas,
+      diasAtraso: estadoCalculado.diasAtraso,
       ultimaActualizacion: new Date().toISOString(),
     });
 
     console.log(
       `[actualizarCamposCredito] Crédito ${creditoId} actualizado:`,
-      estado
+      estadoCalculado
     );
   } catch (error) {
     console.error(
@@ -275,13 +274,12 @@ export async function recalcularTodosCampos(tenantId?: string): Promise<void> {
     for (const credito of creditos) {
       const cuotasCredito = cuotas.filter((c) => c.creditoId === credito.id);
       const pagosCredito = pagos.filter((p) => p.creditoId === credito.id);
-      const estado = calcularEstadoCredito(credito, cuotasCredito, pagosCredito);
+      const estadoCalculado = calcularEstadoCredito(credito, cuotasCredito, pagosCredito);
 
       await db.creditos.update(credito.id, {
-        saldoPendiente: estado.saldoPendiente,
-        cuotasPagadas: estado.cuotasPagadas,
-        diasAtraso: estado.diasAtraso,
-        estado: estado.estadoCalculado,
+        saldoPendiente: estadoCalculado.saldoPendiente,
+        cuotasPagadas: estadoCalculado.cuotasPagadas,
+        diasAtraso: estadoCalculado.diasAtraso,
         ultimaActualizacion: new Date().toISOString(),
       });
     }
