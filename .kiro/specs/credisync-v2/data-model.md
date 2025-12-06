@@ -175,7 +175,144 @@ interface Pago {
 
 ---
 
+### 6. Cierre de Caja
+```typescript
+interface CierreCaja {
+  id: string;                    // cierre-{timestamp}
+  tenantId: string;
+  cobradorId: string;
+  fecha: string;                 // "2025-12-05"
+  
+  // Datos del cierre
+  cajaBase: number;              // Total del día anterior
+  totalCobrado: number;          // Suma de pagos del día
+  totalCreditosOtorgados: number;// Suma de créditos otorgados
+  totalEntradas: number;         // Suma de entradas/inversiones
+  totalGastos: number;           // Suma de gastos/salidas
+  totalCaja: number;             // Base + Cobrado - Créditos + Entradas - Gastos
+  
+  // Estadísticas
+  cuotasCobradas: number;
+  cuotasTotales: number;
+  clientesVisitados: number;
+  observaciones?: string;
+  
+  // Metadata
+  createdAt: string;
+  createdBy: string;
+}
+```
+
+**Queries Comunes:**
+- Cierre de un día específico
+- Cierres de un cobrador
+- Cierre del día anterior (para calcular caja base)
+
+**IMPORTANTE:**
+- Solo puede haber UN cierre por cobrador por día
+- La caja base se calcula del cierre del día anterior
+- Si no hay cierre anterior, caja base = 0
+
+---
+
+### 7. Movimiento de Caja
+```typescript
+interface MovimientoCaja {
+  id: string;                    // mov-{timestamp}-{random}
+  tenantId: string;
+  cobradorId: string;
+  fecha: string;                 // "2025-12-05"
+  tipo: 'ENTRADA' | 'GASTO';
+  detalle: string;               // "Inversión inicial", "Gasolina"
+  valor: number;                 // 50000
+  
+  // Metadata
+  createdAt: string;
+  createdBy: string;
+}
+```
+
+**Queries Comunes:**
+- Movimientos de un día
+- Movimientos por tipo (ENTRADA o GASTO)
+- Movimientos de un cobrador
+
+**IMPORTANTE:**
+- Los movimientos se pueden ELIMINAR solo antes del cierre
+- Después del cierre, son inmutables
+- Se usan para calcular el total de caja
+
+---
+
 ## 🔄 Cálculos Derivados
+
+### Estado de Caja:
+```typescript
+function calcularEstadoCaja(
+  fecha: string,
+  tenantId: string,
+  cobradorId: string
+): EstadoCaja {
+  // 1. Verificar si hay cierre para hoy
+  const cierreHoy = await db.cierres
+    .where('[tenantId+cobradorId+fecha]')
+    .equals([tenantId, cobradorId, fecha])
+    .first();
+  
+  // 2. Obtener caja base del día anterior
+  const ayer = new Date(fecha);
+  ayer.setDate(ayer.getDate() - 1);
+  const fechaAyer = ayer.toISOString().split('T')[0];
+  
+  const cierreAyer = await db.cierres
+    .where('[tenantId+cobradorId+fecha]')
+    .equals([tenantId, cobradorId, fechaAyer])
+    .first();
+  
+  const cajaBase = cierreAyer ? cierreAyer.totalCaja : 0;
+  
+  // 3. Calcular totales del día
+  const pagosHoy = await db.pagos
+    .where('[tenantId+cobradorId+fecha]')
+    .equals([tenantId, cobradorId, fecha])
+    .toArray();
+  const totalCobrado = pagosHoy.reduce((sum, p) => sum + p.monto, 0);
+  
+  const creditosHoy = await db.creditos
+    .where('tenantId')
+    .equals(tenantId)
+    .filter(c => c.fechaDesembolso === fecha && c.cobradorId === cobradorId)
+    .toArray();
+  const totalCreditosOtorgados = creditosHoy.reduce((sum, c) => sum + c.montoOriginal, 0);
+  
+  const movimientosHoy = await db.movimientos
+    .where('[tenantId+cobradorId+fecha]')
+    .equals([tenantId, cobradorId, fecha])
+    .toArray();
+  
+  const totalEntradas = movimientosHoy
+    .filter(m => m.tipo === 'ENTRADA')
+    .reduce((sum, m) => sum + m.valor, 0);
+  
+  const totalGastos = movimientosHoy
+    .filter(m => m.tipo === 'GASTO')
+    .reduce((sum, m) => sum + m.valor, 0);
+  
+  // 4. Calcular total de caja
+  const totalCaja = cajaBase + totalCobrado - totalCreditosOtorgados + totalEntradas - totalGastos;
+  
+  return {
+    fecha,
+    estado: cierreHoy ? 'CERRADA' : 'ABIERTA',
+    cajaBase,
+    totalCobrado,
+    totalCreditosOtorgados,
+    totalEntradas,
+    totalGastos,
+    totalCaja
+  };
+}
+```
 
 ### Estado de una Cuota:
 ```typescript

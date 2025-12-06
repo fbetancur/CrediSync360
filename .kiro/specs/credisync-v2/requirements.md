@@ -197,31 +197,35 @@ CrediSync360 V2 es una aplicación web progresiva (PWA) diseñada para cobradore
 
 ---
 
-### Requisito 6: Cierre de Caja
+### Requisito 6: Balance y Cierre de Caja
 
-**User Story:** Como cobrador, quiero realizar el cierre de caja al final del día, para consolidar mis cobros y reportar resultados.
+**User Story:** Como cobrador, quiero gestionar el balance de caja durante el día y realizar el cierre al final, para consolidar mis cobros y reportar resultados.
 
 #### Acceptance Criteria
 
-6.1. WHEN the Cobrador navigates to the cash closing screen, THE System SHALL display today's date
+6.1. WHEN the Cobrador navigates to the cash closing screen, THE System SHALL display today's date and current cash status (OPEN or CLOSED)
 
-6.2. WHEN the cash closing screen loads, THE System SHALL calculate and display the total amount collected today
+6.2. WHEN the cash closing screen loads, THE System SHALL calculate and display the base cash from the previous day's closing
 
-6.3. WHEN the cash closing screen loads, THE System SHALL calculate and display the count of collected installments and total installments
+6.3. WHEN the cash closing screen loads, THE System SHALL calculate and display the total amount collected today
 
-6.4. WHEN the cash closing screen loads, THE System SHALL calculate and display the count of visited clients
+6.4. WHEN the cash closing screen loads, THE System SHALL calculate and display total credits granted today
 
-6.5. WHEN the Cobrador enters the cash on hand amount, THE System SHALL validate that the amount matches the total collected
+6.5. WHEN the cash closing screen loads, THE System SHALL display entries/investments with ability to add and delete before closing
 
-6.6. WHEN the amounts do not match, THE System SHALL display a warning but allow the Cobrador to proceed
+6.6. WHEN the cash closing screen loads, THE System SHALL display expenses/withdrawals with ability to add and delete before closing
 
-6.7. WHEN the Cobrador adds observations, THE System SHALL allow text up to 1000 characters
+6.7. WHEN the Cobrador adds an entry or expense, THE System SHALL save it immediately to IndexedDB
 
-6.8. WHEN the Cobrador clicks "Generate Report", THE System SHALL create a PDF report with all daily statistics
+6.8. WHEN the Cobrador deletes an entry or expense, THE System SHALL remove it from IndexedDB only if cash is OPEN
 
-6.9. WHEN the Cobrador clicks "Confirm Closing", THE System SHALL save the closing record to IndexedDB
+6.9. WHEN the cash closing screen loads, THE System SHALL calculate total cash as: Base + Collected - Credits + Entries - Expenses
 
-6.10. WHEN a closing is confirmed, THE System SHALL add the operation to the Sync Queue
+6.10. WHEN the Cobrador clicks "Confirm Closing", THE System SHALL save the closing record to IndexedDB and mark cash as CLOSED
+
+6.11. WHEN the cash is CLOSED, THE System SHALL display a "Reopen Cash" button
+
+6.12. WHEN the Cobrador clicks "Reopen Cash", THE System SHALL delete the closing record and mark cash as OPEN (TODO: restrict to administrators in Phase 9)
 
 ---
 

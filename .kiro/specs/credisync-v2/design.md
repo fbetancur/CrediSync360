@@ -182,6 +182,22 @@ interface UseCobro {
 function useCobro(): UseCobro;
 ```
 
+#### useBalance Hook
+```typescript
+interface UseBalanceReturn {
+  estadoCaja: EstadoCaja | null;
+  movimientos: MovimientoCaja[];
+  loading: boolean;
+  error: Error | null;
+  agregarMovimiento: (tipo: 'ENTRADA' | 'GASTO', detalle: string, valor: number) => Promise<void>;
+  eliminarMovimiento: (movimientoId: string) => Promise<void>;
+  cerrarCaja: (observaciones?: string) => Promise<void>;
+  reabrirCaja: () => Promise<void>;
+}
+
+function useBalance(): UseBalanceReturn;
+```
+
 ### Business Logic Functions (Pure)
 
 ```typescript
@@ -506,6 +522,26 @@ interface DynamoDBItem {
 *For any* credit, recalculating the pending balance from installments and payments should always match the previously calculated value.
 
 **Validates: Requirements 2.2, 4.9** (Implicit from architecture)
+
+### Property 21: Base Cash Calculation Correctness
+*For any* day, the base cash should equal the total cash from the previous day's closing, or zero if no previous closing exists.
+
+**Validates: Requirements 6.2**
+
+### Property 22: Cash Balance Formula Consistency
+*For any* cash state, the total cash should always equal: Base + Collected - Credits + Entries - Expenses.
+
+**Validates: Requirements 6.9**
+
+### Property 23: Movement Deletion Restriction
+*For any* movement deletion attempt, the operation should only succeed if the cash register is in OPEN state.
+
+**Validates: Requirements 6.8**
+
+### Property 24: Cash Reopen Idempotency
+*For any* cash reopening operation, reopening an already open cash should have no effect.
+
+**Validates: Requirements 6.11, 6.12**
 
 ---
 
