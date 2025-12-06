@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useClientes } from '../../hooks/useClientes';
 import { ClienteCard } from './ClienteCard';
 import { ClienteDetail } from './ClienteDetail';
+import { NuevoCliente } from './NuevoCliente';
 
 export function ClientesList() {
   const { clientes, loading, error, buscar, queryBusqueda } = useClientes();
@@ -129,22 +130,16 @@ export function ClientesList() {
         )}
       </div>
 
-      {/* Modal de Nuevo Cliente (placeholder) */}
+      {/* Modal de Nuevo Cliente */}
       {mostrarFormulario && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Nuevo Cliente</h2>
-            <p className="text-gray-600 mb-4">
-              Formulario de creación de cliente (próximamente)
-            </p>
-            <button
-              onClick={() => setMostrarFormulario(false)}
-              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
+        <NuevoCliente
+          onClose={() => setMostrarFormulario(false)}
+          onSuccess={(clienteId) => {
+            setMostrarFormulario(false);
+            // Navegar al detalle del cliente recién creado
+            setClienteSeleccionado(clienteId);
+          }}
+        />
       )}
     </div>
   );

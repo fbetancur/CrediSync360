@@ -269,6 +269,16 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Verificar que siempre retorna el mismo resultado
   - _Requirements: 4.5, 4.6, 4.7, 4.8_
 
+### [x] 15.3 Implementar formulario Nuevo Cliente
+- [x] 15.3.1 Crear `src/components/clientes/NuevoCliente.tsx`
+  - Formulario modal con todos los campos requeridos
+  - Validación de campos (nombre, documento, teléfono, dirección, barrio, referencia)
+  - Captura de ubicación GPS (opcional)
+  - Guardar en Dexie
+  - Agregar a sync queue
+  - Navegar al detalle del cliente creado
+  - _Requirements: 3.6, 3.7, 3.8_
+
 ### [ ] 16. Checkpoint - Verificar gestión de clientes
 - Ensure all tests pass, ask the user if questions arise.
 
