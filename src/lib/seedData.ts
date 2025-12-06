@@ -79,7 +79,7 @@ export async function seedDatabase() {
   
   const producto = productos[0]; // Usar el primer producto para los créditos de prueba
 
-  // 2. Crear clientes de prueba
+  // 2. Crear clientes de prueba con campos calculados inicializados
   const clientes: Cliente[] = [
     {
       id: 'cliente-1',
@@ -90,6 +90,12 @@ export async function seedDatabase() {
       direccion: 'Calle 10 #20-30',
       barrio: 'Centro',
       referencia: 'Casa azul',
+      creditosActivos: 0,
+      saldoTotal: 0,
+      diasAtrasoMax: 0,
+      estado: 'SIN_CREDITOS',
+      score: 'REGULAR',
+      ultimaActualizacion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       createdBy: userId,
     },
@@ -102,6 +108,12 @@ export async function seedDatabase() {
       direccion: 'Carrera 5 #15-25',
       barrio: 'Norte',
       referencia: 'Tienda esquina',
+      creditosActivos: 0,
+      saldoTotal: 0,
+      diasAtrasoMax: 0,
+      estado: 'SIN_CREDITOS',
+      score: 'REGULAR',
+      ultimaActualizacion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       createdBy: userId,
     },
@@ -114,6 +126,12 @@ export async function seedDatabase() {
       direccion: 'Avenida 8 #30-40',
       barrio: 'Sur',
       referencia: 'Edificio verde',
+      creditosActivos: 0,
+      saldoTotal: 0,
+      diasAtrasoMax: 0,
+      estado: 'SIN_CREDITOS',
+      score: 'REGULAR',
+      ultimaActualizacion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       createdBy: userId,
     },
@@ -126,6 +144,12 @@ export async function seedDatabase() {
       direccion: 'Calle 20 #10-15',
       barrio: 'Occidente',
       referencia: 'Casa blanca',
+      creditosActivos: 0,
+      saldoTotal: 0,
+      diasAtrasoMax: 0,
+      estado: 'SIN_CREDITOS',
+      score: 'REGULAR',
+      ultimaActualizacion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       createdBy: userId,
     },
@@ -138,6 +162,12 @@ export async function seedDatabase() {
       direccion: 'Carrera 15 #25-35',
       barrio: 'Oriente',
       referencia: 'Panadería',
+      creditosActivos: 0,
+      saldoTotal: 0,
+      diasAtrasoMax: 0,
+      estado: 'SIN_CREDITOS',
+      score: 'REGULAR',
+      ultimaActualizacion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       createdBy: userId,
     },
@@ -150,7 +180,7 @@ export async function seedDatabase() {
     const cliente = clientes[i];
     const creditoId = `credito-${i + 1}`;
 
-    // Crédito
+    // Crédito con campos calculados inicializados
     const credito: Credito = {
       id: creditoId,
       tenantId,
@@ -167,12 +197,16 @@ export async function seedDatabase() {
       fechaPrimeraCuota: format(addDays(hoy, -14), 'yyyy-MM-dd'),
       fechaUltimaCuota: format(addDays(hoy, -5), 'yyyy-MM-dd'),
       estado: 'ACTIVO',
+      saldoPendiente: 300000,
+      cuotasPagadas: 0,
+      diasAtraso: 0,
+      ultimaActualizacion: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       createdBy: userId,
     };
     await db.creditos.add(credito);
 
-    // Cuotas
+    // Cuotas con campos calculados inicializados
     const cuotas: Cuota[] = [];
     for (let j = 0; j < 10; j++) {
       // Algunas cuotas atrasadas, algunas del día, algunas futuras
@@ -196,12 +230,23 @@ export async function seedDatabase() {
         numero: j + 1,
         fechaProgramada: format(fechaCuota, 'yyyy-MM-dd'),
         montoProgramado: 30000,
+        // Campos calculados (inicializados para cuota nueva sin pagos)
+        montoPagado: 0,
+        saldoPendiente: 30000,
+        estado: 'PENDIENTE',
+        diasAtraso: 0,
+        ultimaActualizacion: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         createdBy: userId,
       });
     }
     await db.cuotas.bulkAdd(cuotas);
   }
+
+  // 4. Recalcular campos calculados para todos los registros
+  console.log('🔄 Recalculando campos calculados...');
+  const { recalcularTodosCampos } = await import('./actualizarCampos');
+  await recalcularTodosCampos(tenantId);
 
   console.log('✅ Datos de prueba generados:');
   console.log(`   - ${clientes.length} clientes`);

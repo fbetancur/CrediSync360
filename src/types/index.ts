@@ -30,6 +30,13 @@ export interface Cliente {
   referencia: string;
   latitud?: number;
   longitud?: number;
+  // Campos calculados (cache) - se actualizan cuando hay cambios en créditos
+  creditosActivos: number;
+  saldoTotal: number;
+  diasAtrasoMax: number;
+  estado: EstadoCliente;
+  score: Score;
+  ultimaActualizacion: string; // timestamp ISO para validar frescura
   createdAt: string;
   createdBy: string;
 }
@@ -68,6 +75,11 @@ export interface Credito {
   fechaUltimaCuota: string; // YYYY-MM-DD
   // Estado
   estado: EstadoCredito;
+  // Campos calculados (cache) - se actualizan cuando hay pagos
+  saldoPendiente: number;
+  cuotasPagadas: number;
+  diasAtraso: number;
+  ultimaActualizacion: string; // timestamp ISO para validar frescura
   // Metadata
   createdAt: string;
   createdBy: string;
@@ -82,6 +94,12 @@ export interface Cuota {
   numero: number;
   fechaProgramada: string; // YYYY-MM-DD
   montoProgramado: number;
+  // Campos calculados (cache) - se actualizan cuando hay pagos
+  montoPagado: number;
+  saldoPendiente: number;
+  estado: EstadoCuota;
+  diasAtraso: number;
+  ultimaActualizacion: string; // timestamp ISO para validar frescura
   // Metadata
   createdAt: string;
   createdBy: string;
@@ -188,7 +206,7 @@ export interface EstadoCreditoCalculado {
   cuotasPagadas: number;
   cuotasPendientes: number;
   diasAtraso: number;
-  estadoCalculado: 'AL_DIA' | 'MORA' | 'CANCELADO';
+  estadoCalculado: EstadoCredito;
 }
 
 export interface EstadoClienteCalculado {

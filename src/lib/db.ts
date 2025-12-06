@@ -33,43 +33,123 @@ export class CrediSyncDB extends Dexie {
   constructor() {
     super('credisync-v2');
 
-    // Definir schema con índices
+    // Versión 2: Schema original
     this.version(2).stores({
-      // Clientes
-      // Índices: id (primary), tenantId, documento, nombre, [tenantId+nombre]
       clientes: 'id, tenantId, documento, nombre, [tenantId+nombre]',
-
-      // Productos de Crédito
-      // Índices: id (primary), tenantId, activo, [tenantId+activo]
       productos: 'id, tenantId, activo, [tenantId+activo]',
-
-      // Créditos
-      // Índices: id (primary), tenantId, clienteId, cobradorId, estado
       creditos:
         'id, tenantId, clienteId, cobradorId, estado, [tenantId+clienteId], [tenantId+estado]',
-
-      // Cuotas
-      // Índices: id (primary), tenantId, creditoId, clienteId, fechaProgramada
-      // Índices compuestos para queries comunes
       cuotas:
         'id, tenantId, creditoId, clienteId, fechaProgramada, [tenantId+fechaProgramada], [tenantId+clienteId], [clienteId+fechaProgramada]',
-
-      // Pagos
-      // Índices: id (primary), tenantId, creditoId, cuotaId, clienteId, cobradorId, fecha
       pagos:
         'id, tenantId, creditoId, cuotaId, clienteId, cobradorId, fecha, [tenantId+fecha], [tenantId+cobradorId+fecha], [clienteId+fecha]',
-
-      // Cierres de Caja
-      // Índices: id (primary), tenantId, cobradorId, fecha
       cierres: 'id, tenantId, cobradorId, fecha, [tenantId+cobradorId+fecha]',
-
-      // Movimientos de Caja (Entradas y Gastos)
-      // Índices: id (primary), tenantId, cobradorId, fecha, tipo
       movimientos: 'id, tenantId, cobradorId, fecha, tipo, [tenantId+cobradorId+fecha]',
-
-      // Cola de Sincronización
-      // Índices: id (auto-increment primary), status, type, timestamp
       syncQueue: '++id, status, type, timestamp, [status+timestamp]',
+    });
+
+    // Versión 3: Agregar campos calculados (optimización)
+    this.version(3).stores({
+      // Clientes: agregar índices para campos calculados
+      clientes:
+        'id, tenantId, documento, nombre, estado, diasAtrasoMax, [tenantId+nombre], [tenantId+estado]',
+
+      // Créditos: agregar índices para campos calculados
+      creditos:
+        'id, tenantId, clienteId, cobradorId, estado, diasAtraso, [tenantId+clienteId], [tenantId+estado], [tenantId+diasAtraso]',
+
+      // Cuotas: agregar índices para campos calculados
+      cuotas:
+        'id, tenantId, creditoId, clienteId, fechaProgramada, estado, diasAtraso, [tenantId+fechaProgramada], [tenantId+clienteId], [clienteId+fechaProgramada], [tenantId+estado]',
+
+      // Mantener las demás tablas igual
+      productos: 'id, tenantId, activo, [tenantId+activo]',
+      pagos:
+        'id, tenantId, creditoId, cuotaId, clienteId, cobradorId, fecha, [tenantId+fecha], [tenantId+cobradorId+fecha], [clienteId+fecha]',
+      cierres: 'id, tenantId, cobradorId, fecha, [tenantId+cobradorId+fecha]',
+      movimientos:
+        'id, tenantId, cobradorId, fecha, tipo, [tenantId+cobradorId+fecha]',
+      syncQueue: '++id, status, type, timestamp, [status+timestamp]',
+    }).upgrade(async (trans) => {
+      // Migración: calcular campos para registros existentes
+      console.log(
+        '[DB Migration v3] Calculando campos para registros existentes...'
+      );
+
+      // Importar funciones de cálculo
+      const { calcularEstadoCredito, calcularEstadoCliente, calcularEstadoCuota } =
+        await import('./calculos');
+
+      // Obtener todos los datos
+      const creditos = await trans.table('creditos').toArray();
+      const cuotas = await trans.table('cuotas').toArray();
+      const pagos = await trans.table('pagos').toArray();
+      const clientes = await trans.table('clientes').toArray();
+
+      // 1. Actualizar cuotas (primero porque créditos dependen de ellas)
+      console.log(`[DB Migration v3] Actualizando ${cuotas.length} cuotas...`);
+      for (const cuota of cuotas) {
+        const pagosCuota = pagos.filter((p) => p.cuotaId === cuota.id);
+        const estado = calcularEstadoCuota(cuota, pagosCuota);
+
+        await trans.table('cuotas').update(cuota.id, {
+          montoPagado: estado.montoPagado,
+          saldoPendiente: estado.saldoPendiente,
+          estado: estado.estado,
+          diasAtraso: estado.diasAtraso,
+          ultimaActualizacion: new Date().toISOString(),
+        });
+      }
+
+      // 2. Actualizar créditos
+      console.log(
+        `[DB Migration v3] Actualizando ${creditos.length} créditos...`
+      );
+      for (const credito of creditos) {
+        const cuotasCredito = cuotas.filter((c) => c.creditoId === credito.id);
+        const pagosCredito = pagos.filter((p) => p.creditoId === credito.id);
+        const estado = calcularEstadoCredito(
+          credito,
+          cuotasCredito,
+          pagosCredito
+        );
+
+        await trans.table('creditos').update(credito.id, {
+          saldoPendiente: estado.saldoPendiente,
+          cuotasPagadas: estado.cuotasPagadas,
+          diasAtraso: estado.diasAtraso,
+          ultimaActualizacion: new Date().toISOString(),
+        });
+      }
+
+      // 3. Actualizar clientes
+      console.log(
+        `[DB Migration v3] Actualizando ${clientes.length} clientes...`
+      );
+      for (const cliente of clientes) {
+        const creditosCliente = creditos.filter(
+          (c) => c.clienteId === cliente.id
+        );
+        const cuotasCliente = cuotas.filter((c) => c.clienteId === cliente.id);
+        const pagosCliente = pagos.filter((p) => p.clienteId === cliente.id);
+        const estado = calcularEstadoCliente(
+          cliente,
+          creditosCliente,
+          cuotasCliente,
+          pagosCliente
+        );
+
+        await trans.table('clientes').update(cliente.id, {
+          creditosActivos: estado.creditosActivos,
+          saldoTotal: estado.saldoTotal,
+          diasAtrasoMax: estado.diasAtrasoMax,
+          estado: estado.estado,
+          score: estado.score,
+          ultimaActualizacion: new Date().toISOString(),
+        });
+      }
+
+      console.log('[DB Migration v3] Migración completada');
     });
   }
 

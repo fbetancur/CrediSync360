@@ -10,7 +10,6 @@
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
-import { calcularEstadoCliente } from '../lib/calculos';
 import type { Cliente } from '../types';
 
 interface ClienteConEstado extends Cliente {
@@ -31,6 +30,9 @@ interface UseClientesReturn {
 /**
  * Hook para gestionar lista de clientes
  * 
+ * OPTIMIZADO: Usa campos calculados (cache) en lugar de calcular cada vez.
+ * Los campos se actualizan automáticamente cuando se registran pagos.
+ * 
  * Property 9: Client Search Completeness
  * Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5
  */
@@ -39,6 +41,8 @@ export function useClientes(tenantId: string = 'tenant-1'): UseClientesReturn {
   const [error, setError] = useState<Error | null>(null);
 
   // Cargar todos los clientes del tenant
+  // OPTIMIZACIÓN: Ya no necesitamos cargar créditos, cuotas y pagos
+  // porque los campos calculados ya están en el cliente
   const clientesBase = useLiveQuery(async () => {
     try {
       return await db.clientes
@@ -52,82 +56,31 @@ export function useClientes(tenantId: string = 'tenant-1'): UseClientesReturn {
     }
   }, [tenantId]);
 
-  // Cargar todos los créditos
-  const creditos = useLiveQuery(async () => {
-    try {
-      return await db.creditos
-        .where('tenantId')
-        .equals(tenantId)
-        .toArray();
-    } catch (err) {
-      console.error('[useClientes] Error loading creditos:', err);
-      return [];
-    }
-  }, [tenantId]);
-
-  // Cargar todas las cuotas
-  const cuotas = useLiveQuery(async () => {
-    try {
-      return await db.cuotas
-        .where('tenantId')
-        .equals(tenantId)
-        .toArray();
-    } catch (err) {
-      console.error('[useClientes] Error loading cuotas:', err);
-      return [];
-    }
-  }, [tenantId]);
-
-  // Cargar todos los pagos
-  const pagos = useLiveQuery(async () => {
-    try {
-      return await db.pagos
-        .where('tenantId')
-        .equals(tenantId)
-        .toArray();
-    } catch (err) {
-      console.error('[useClientes] Error loading pagos:', err);
-      return [];
-    }
-  }, [tenantId]);
-
   /**
-   * Calcular estado de cada cliente
+   * Mapear clientes con estado (ya calculado)
+   * 
+   * OPTIMIZACIÓN: Los campos ya están calculados, solo mapeamos.
+   * Antes: O(n * m * p) donde n=clientes, m=créditos, p=pagos
+   * Ahora: O(n) solo mapeo
    * 
    * Validates: Requirements 3.3, 3.4, 3.5
    */
   const clientesConEstado = useMemo((): ClienteConEstado[] => {
-    if (!clientesBase || !creditos || !cuotas || !pagos) {
+    if (!clientesBase) {
       return [];
     }
 
-    return clientesBase.map((cliente) => {
-      // Obtener créditos del cliente
-      const creditosCliente = creditos.filter((c) => c.clienteId === cliente.id);
-      
-      // Obtener cuotas del cliente
-      const cuotasCliente = cuotas.filter((c) => c.clienteId === cliente.id);
-      
-      // Obtener pagos del cliente
-      const pagosCliente = pagos.filter((p) => p.clienteId === cliente.id);
-
-      // Calcular estado del cliente
-      const estadoCliente = calcularEstadoCliente(
-        cliente,
-        creditosCliente,
-        cuotasCliente,
-        pagosCliente
-      );
-
-      return {
-        ...cliente,
-        estado: estadoCliente.estado,
-        saldoTotal: estadoCliente.saldoTotal,
-        creditosActivos: estadoCliente.creditosActivos,
-        diasAtrasoMax: estadoCliente.diasAtrasoMax,
-      };
-    });
-  }, [clientesBase, creditos, cuotas, pagos]);
+    // Los campos calculados ya están en el cliente
+    // Solo necesitamos mapear al tipo esperado
+    return clientesBase.map((cliente) => ({
+      ...cliente,
+      // Estos campos ya están calculados y actualizados
+      estado: cliente.estado,
+      saldoTotal: cliente.saldoTotal,
+      creditosActivos: cliente.creditosActivos,
+      diasAtrasoMax: cliente.diasAtrasoMax,
+    }));
+  }, [clientesBase]);
 
   /**
    * Filtrar clientes por búsqueda
@@ -173,7 +126,7 @@ export function useClientes(tenantId: string = 'tenant-1'): UseClientesReturn {
 
   return {
     clientes: clientesFiltrados,
-    loading: !clientesBase || !creditos || !cuotas || !pagos,
+    loading: !clientesBase,
     error,
     buscar,
     queryBusqueda,

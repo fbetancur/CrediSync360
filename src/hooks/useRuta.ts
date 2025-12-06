@@ -15,7 +15,6 @@ import { calcularEstadoCuota } from '../lib/calculos';
 import type { ClienteRuta } from '../types';
 
 // TODO: Reemplazar con valores reales del contexto de autenticación
-const TENANT_ID = 'tenant-demo';
 const COBRADOR_ID = 'cobrador-demo';
 
 /**

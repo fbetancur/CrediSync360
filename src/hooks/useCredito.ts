@@ -111,7 +111,7 @@ export function useCredito(): UseCreditoReturn {
 
       const fechaUltimaCuota = fechasCuotas[fechasCuotas.length - 1];
 
-      // Crear objeto crédito
+      // Crear objeto crédito con campos calculados inicializados
       const credito: Credito = {
         id: creditoId,
         tenantId: 'tenant-1', // TODO: Obtener del contexto de autenticación
@@ -128,11 +128,16 @@ export function useCredito(): UseCreditoReturn {
         fechaPrimeraCuota: params.fechaPrimeraCuota.toISOString().split('T')[0],
         fechaUltimaCuota,
         estado: 'ACTIVO',
+        // Campos calculados (inicializados para crédito nuevo)
+        saldoPendiente: totalAPagar,
+        cuotasPagadas: 0,
+        diasAtraso: 0,
+        ultimaActualizacion: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         createdBy: 'user-1', // TODO: Obtener del contexto de autenticación
       };
 
-      // Crear cuotas
+      // Crear cuotas con campos calculados inicializados
       const cuotas: Cuota[] = fechasCuotas.map((fecha, index) => ({
         id: `cuota-${creditoId}-${index + 1}`,
         tenantId: 'tenant-1',
@@ -141,6 +146,12 @@ export function useCredito(): UseCreditoReturn {
         numero: index + 1,
         fechaProgramada: fecha,
         montoProgramado: valorCuota,
+        // Campos calculados (inicializados para cuota nueva sin pagos)
+        montoPagado: 0,
+        saldoPendiente: valorCuota,
+        estado: 'PENDIENTE',
+        diasAtraso: 0,
+        ultimaActualizacion: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         createdBy: 'user-1',
       }));
@@ -152,6 +163,10 @@ export function useCredito(): UseCreditoReturn {
       // Guardar cuotas en Dexie
       await db.cuotas.bulkAdd(cuotas);
       console.log(`✅ ${cuotas.length} cuotas creadas`);
+
+      // Actualizar campos calculados del cliente
+      const { actualizarCamposCliente } = await import('../lib/actualizarCampos');
+      await actualizarCamposCliente(params.clienteId);
 
       // Agregar a sync queue
       await addToSyncQueue('CREATE_CREDITO', {

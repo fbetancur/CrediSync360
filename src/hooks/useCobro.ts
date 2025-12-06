@@ -81,6 +81,10 @@ export function useCobro(): UseCobroReturn {
       
       console.log('✅ Pago registrado:', pago);
 
+      // Actualizar campos calculados de la cuota, crédito y cliente
+      const { actualizarDespuesDePago } = await import('../lib/actualizarCampos');
+      await actualizarDespuesDePago(pago.cuotaId, pago.creditoId, pago.clienteId);
+
       // Agregar a sync queue (Requirements 2.7)
       await addToSyncQueue('CREATE_PAGO', pago);
 

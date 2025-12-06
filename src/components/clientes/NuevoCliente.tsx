@@ -117,7 +117,7 @@ export function NuevoCliente({ onClose, onSuccess }: NuevoClienteProps) {
       // Generar ID único
       const clienteId = `cliente-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
-      // Crear objeto cliente
+      // Crear objeto cliente con campos calculados inicializados
       const cliente: Cliente = {
         id: clienteId,
         tenantId: 'tenant-1', // TODO: Obtener del contexto de autenticación
@@ -129,6 +129,13 @@ export function NuevoCliente({ onClose, onSuccess }: NuevoClienteProps) {
         referencia: formData.referencia.trim(),
         latitud: formData.latitud,
         longitud: formData.longitud,
+        // Campos calculados (inicializados para cliente nuevo sin créditos)
+        creditosActivos: 0,
+        saldoTotal: 0,
+        diasAtrasoMax: 0,
+        estado: 'SIN_CREDITOS',
+        score: 'REGULAR',
+        ultimaActualizacion: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         createdBy: 'user-1', // TODO: Obtener del contexto de autenticación
       };
