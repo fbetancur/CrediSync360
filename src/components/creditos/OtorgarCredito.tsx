@@ -235,7 +235,9 @@ export function OtorgarCredito({
                 $
               </span>
               <input
-                type="text"
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={monto}
                 onChange={(e) => {
                   const valor = e.target.value;

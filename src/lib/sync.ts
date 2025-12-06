@@ -135,6 +135,7 @@ function calculateBackoff(retries: number): number {
 
 /**
  * Procesar toda la cola de sincronización
+ * OPTIMIZADO: Procesa items en batches paralelos para mayor velocidad
  * 
  * Property 14: Sync Queue FIFO Ordering
  * Validates: Requirements 7.3, 7.4, 7.5, 7.6
@@ -164,56 +165,96 @@ async function processSyncQueue(): Promise<void> {
       return;
     }
 
-    console.log(`[Sync] Processing ${pendingItems.length} items...`);
+    console.log(`[Sync] Processing ${pendingItems.length} items in parallel batches...`);
 
-    for (const item of pendingItems) {
-      // Verificar si debe esperar por backoff
-      if (item.retries > 0) {
-        const backoff = calculateBackoff(item.retries);
-        const timeSinceLastRetry = Date.now() - (item.timestamp || 0);
-        
-        if (timeSinceLastRetry < backoff) {
-          console.log(
-            `[Sync] Waiting for backoff: ${item.type} (${backoff - timeSinceLastRetry}ms remaining)`
-          );
+    // OPTIMIZACIÓN: Procesar en batches paralelos de 10 items
+    const BATCH_SIZE = 10;
+    
+    for (let i = 0; i < pendingItems.length; i += BATCH_SIZE) {
+      const batch = pendingItems.slice(i, i + BATCH_SIZE);
+      
+      console.log(`[Sync] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(pendingItems.length / BATCH_SIZE)} (${batch.length} items)`);
+
+      // Procesar batch en paralelo con Promise.allSettled
+      const results = await Promise.allSettled(
+        batch.map(async (item) => {
+          // Verificar si debe esperar por backoff
+          if (item.retries > 0) {
+            const backoff = calculateBackoff(item.retries);
+            const timeSinceLastRetry = Date.now() - (item.timestamp || 0);
+            
+            if (timeSinceLastRetry < backoff) {
+              console.log(
+                `[Sync] Waiting for backoff: ${item.type} (${backoff - timeSinceLastRetry}ms remaining)`
+              );
+              return { item, result: { success: false, error: 'Waiting for backoff' }, skip: true };
+            }
+          }
+
+          // Intentar sincronizar
+          const result = await processSyncItem(item);
+          return { item, result, skip: false };
+        })
+      );
+
+      // Procesar resultados de cada item en el batch
+      for (let j = 0; j < batch.length; j++) {
+        const item = batch[j];
+        const promiseResult = results[j];
+
+        // Si la promesa fue rechazada (error inesperado)
+        if (promiseResult.status === 'rejected') {
+          console.error(`[Sync] Unexpected error for ${item.type}:`, promiseResult.reason);
+          
+          const newRetries = item.retries + 1;
+          await db.syncQueue.update(item.id!, {
+            retries: newRetries,
+            lastError: String(promiseResult.reason),
+            status: newRetries >= MAX_RETRIES ? 'FAILED' : 'PENDING',
+          });
           continue;
         }
-      }
 
-      // Intentar sincronizar
-      const result = await processSyncItem(item);
+        // Si la promesa fue resuelta
+        const { result, skip } = promiseResult.value;
 
-      if (result.success) {
-        // Marcar como sincronizado
-        await db.syncQueue.update(item.id!, {
-          status: 'SYNCED',
-          syncedAt: Date.now(),
-        });
-      } else {
-        // Incrementar reintentos
-        const newRetries = item.retries + 1;
+        // Si se debe saltar (esperando backoff)
+        if (skip) {
+          continue;
+        }
 
-        if (newRetries >= MAX_RETRIES) {
-          // Marcar como fallido después de MAX_RETRIES
+        if (result.success) {
+          // Marcar como sincronizado
           await db.syncQueue.update(item.id!, {
-            status: 'FAILED',
-            retries: newRetries,
-            lastError: result.error || 'Max retries exceeded',
+            status: 'SYNCED',
+            syncedAt: Date.now(),
           });
-
-          console.error(`[Sync] Failed after ${MAX_RETRIES} retries: ${item.type}`);
-          console.error(`[Sync] Last error: ${result.error}`);
-          
-          // TODO: Notificar al usuario
         } else {
-          // Incrementar contador de reintentos
-          await db.syncQueue.update(item.id!, {
-            retries: newRetries,
-            lastError: result.error || 'Sync failed, will retry',
-          });
+          // Incrementar reintentos
+          const newRetries = item.retries + 1;
 
-          console.log(`[Sync] Retry ${newRetries}/${MAX_RETRIES}: ${item.type}`);
-          console.log(`[Sync] Error: ${result.error}`);
+          if (newRetries >= MAX_RETRIES) {
+            // Marcar como fallido después de MAX_RETRIES
+            await db.syncQueue.update(item.id!, {
+              status: 'FAILED',
+              retries: newRetries,
+              lastError: result.error || 'Max retries exceeded',
+            });
+
+            console.error(`[Sync] Failed after ${MAX_RETRIES} retries: ${item.type}`);
+            console.error(`[Sync] Last error: ${result.error}`);
+            
+            // TODO: Notificar al usuario
+          } else {
+            // Incrementar contador de reintentos
+            await db.syncQueue.update(item.id!, {
+              retries: newRetries,
+              lastError: result.error || 'Sync failed, will retry',
+            });
+
+            console.log(`[Sync] Retry ${newRetries}/${MAX_RETRIES}: ${item.type}`);
+            console.log(`[Sync] Error: ${result.error}`);
+          }
         }
       }
     }

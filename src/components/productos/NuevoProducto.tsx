@@ -178,6 +178,8 @@ export function NuevoProducto({ producto, onClose }: NuevoProductoProps) {
               </label>
               <input
                 type="number"
+                inputMode="decimal"
+                pattern="[0-9]*"
                 id="interes"
                 value={interes}
                 onChange={(e) => setInteres(e.target.value)}
@@ -198,6 +200,8 @@ export function NuevoProducto({ producto, onClose }: NuevoProductoProps) {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 id="cuotas"
                 value={numeroCuotas}
                 onChange={(e) => setNumeroCuotas(e.target.value)}
@@ -241,6 +245,8 @@ export function NuevoProducto({ producto, onClose }: NuevoProductoProps) {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 id="minimo"
                 value={montoMinimo}
                 onChange={(e) => setMontoMinimo(e.target.value)}
@@ -259,6 +265,8 @@ export function NuevoProducto({ producto, onClose }: NuevoProductoProps) {
               </label>
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 id="maximo"
                 value={montoMaximo}
                 onChange={(e) => setMontoMaximo(e.target.value)}

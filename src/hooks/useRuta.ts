@@ -7,12 +7,11 @@
  * Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { format } from 'date-fns';
 import { db } from '../lib/db';
-import { calcularEstadoCuota } from '../lib/calculos';
-import type { ClienteRuta } from '../types';
+import type { ClienteRuta, Cliente } from '../types';
 
 // TODO: Reemplazar con valores reales del contexto de autenticación
 const COBRADOR_ID = 'cobrador-demo';
@@ -30,13 +29,16 @@ export function useRuta() {
   // Fecha de hoy en formato YYYY-MM-DD
   const hoy = format(new Date(), 'yyyy-MM-dd');
 
-  // Cargar todas las cuotas del día y atrasadas
+  // OPTIMIZADO: Cargar solo cuotas del cobrador actual
   const cuotas = useLiveQuery(async () => {
     try {
-      // Obtener cuotas programadas para hoy o antes (atrasadas)
+      // Obtener cuotas del cobrador programadas para hoy o antes (atrasadas)
       return await db.cuotas
-        .where('fechaProgramada')
-        .belowOrEqual(hoy)
+        .where('[tenantId+cobradorId+fechaProgramada]')
+        .between(
+          ['tenant-1', COBRADOR_ID, '2000-01-01'],
+          ['tenant-1', COBRADOR_ID, hoy]
+        )
         .toArray();
     } catch (err) {
       console.error('[useRuta] Error loading cuotas:', err);
@@ -45,30 +47,44 @@ export function useRuta() {
     }
   }, [hoy]);
 
-  // Cargar todos los pagos
+  // OPTIMIZADO: Cargar solo pagos del cobrador
   const pagos = useLiveQuery(async () => {
     try {
-      return await db.pagos.toArray();
+      return await db.pagos
+        .where('cobradorId')
+        .equals(COBRADOR_ID)
+        .toArray();
     } catch (err) {
       console.error('[useRuta] Error loading pagos:', err);
       return [];
     }
   }, []);
 
-  // Cargar todos los clientes
+  // OPTIMIZADO: Cargar solo clientes del cobrador (a través de sus cuotas)
   const clientes = useLiveQuery(async () => {
     try {
-      return await db.clientes.toArray();
+      if (!cuotas) return [];
+      
+      // Obtener IDs únicos de clientes
+      const clienteIds = [...new Set(cuotas.map(c => c.clienteId))];
+      
+      // Cargar solo esos clientes
+      return await db.clientes.bulkGet(clienteIds).then(results => 
+        results.filter(c => c !== undefined) as Cliente[]
+      );
     } catch (err) {
       console.error('[useRuta] Error loading clientes:', err);
       return [];
     }
-  }, []);
+  }, [cuotas]);
 
-  // Cargar todos los créditos
+  // OPTIMIZADO: Cargar solo créditos del cobrador
   const creditos = useLiveQuery(async () => {
     try {
-      return await db.creditos.toArray();
+      return await db.creditos
+        .where('cobradorId')
+        .equals(COBRADOR_ID)
+        .toArray();
     } catch (err) {
       console.error('[useRuta] Error loading creditos:', err);
       return [];
@@ -77,12 +93,13 @@ export function useRuta() {
 
   /**
    * Procesar y agrupar cuotas por cliente
+   * OPTIMIZADO: Usa campos calculados en lugar de recalcular
    * 
    * Property 2: Overdue Grouping Consistency
    * Validates: Requirements 1.4, 1.5
    */
   const procesarRuta = useCallback((): ClienteRuta[] => {
-    if (!cuotas || !pagos || !clientes || !creditos) {
+    if (!cuotas || !clientes || !creditos) {
       return [];
     }
 
@@ -90,27 +107,24 @@ export function useRuta() {
     const cuotasPorCliente = new Map<string, ClienteRuta>();
 
     for (const cuota of cuotas) {
+      // OPTIMIZACIÓN: Usar campo calculado 'estado' en lugar de calcular
+      if (cuota.estado === 'PAGADA') continue;
+
       const cliente = clientes.find((c) => c.id === cuota.clienteId);
       if (!cliente) continue;
 
       const credito = creditos.find((cr) => cr.id === cuota.creditoId);
       if (!credito) continue;
 
-      // Calcular estado de la cuota
-      const pagosCuota = pagos.filter((p) => p.cuotaId === cuota.id);
-      const estadoCuota = calcularEstadoCuota(cuota, pagosCuota);
-
-      // Solo incluir cuotas pendientes o parciales
-      if (estadoCuota.estado === 'PAGADA') continue;
-
       // Si el cliente ya existe en el mapa, agregar la cuota
       if (cuotasPorCliente.has(cliente.id)) {
         const clienteExistente = cuotasPorCliente.get(cliente.id)!;
         clienteExistente.cuotas.push(cuota);
-        clienteExistente.totalPendiente += estadoCuota.saldoPendiente;
+        // OPTIMIZACIÓN: Usar campos calculados directamente
+        clienteExistente.totalPendiente += cuota.saldoPendiente;
         clienteExistente.diasAtrasoMax = Math.max(
           clienteExistente.diasAtrasoMax,
-          estadoCuota.diasAtraso
+          cuota.diasAtraso
         );
       } else {
         // Crear nueva entrada para el cliente
@@ -118,15 +132,16 @@ export function useRuta() {
           cliente,
           credito,
           cuotas: [cuota],
-          totalPendiente: estadoCuota.saldoPendiente,
-          diasAtrasoMax: estadoCuota.diasAtraso,
+          // OPTIMIZACIÓN: Usar campos calculados directamente
+          totalPendiente: cuota.saldoPendiente,
+          diasAtrasoMax: cuota.diasAtraso,
         });
       }
     }
 
     // Convertir mapa a array
     return Array.from(cuotasPorCliente.values());
-  }, [cuotas, pagos, clientes, creditos]);
+  }, [cuotas, clientes, creditos]);
 
   /**
    * Ordenar ruta: atrasados primero, luego del día
@@ -172,10 +187,12 @@ export function useRuta() {
 
   /**
    * Calcular estadísticas de la ruta
+   * OPTIMIZADO: Cambiado de useCallback a useMemo para evitar recálculos innecesarios
+   * OPTIMIZADO: Usa campos calculados en lugar de recalcular estados
    * 
    * Validates: Requirements 1.2, 1.3
    */
-  const estadisticas = useCallback(() => {
+  const estadisticas = useMemo(() => {
     if (!pagos || !cuotas) {
       return {
         totalCobradoHoy: 0,
@@ -190,20 +207,9 @@ export function useRuta() {
     );
     const totalCobradoHoy = pagosHoy.reduce((sum, p) => sum + p.monto, 0);
 
-    // Contar cuotas cobradas (completamente pagadas)
-    let cuotasCobradas = 0;
-    let cuotasPendientes = 0;
-
-    for (const cuota of cuotas) {
-      const pagosCuota = pagos.filter((p) => p.cuotaId === cuota.id);
-      const estadoCuota = calcularEstadoCuota(cuota, pagosCuota);
-
-      if (estadoCuota.estado === 'PAGADA') {
-        cuotasCobradas++;
-      } else {
-        cuotasPendientes++;
-      }
-    }
+    // OPTIMIZACIÓN: Usar campos calculados directamente
+    const cuotasCobradas = cuotas.filter(c => c.estado === 'PAGADA').length;
+    const cuotasPendientes = cuotas.filter(c => c.estado !== 'PAGADA').length;
 
     return {
       totalCobradoHoy,
@@ -231,7 +237,7 @@ export function useRuta() {
 
   return {
     rutaDelDia,
-    estadisticas: estadisticas(),
+    estadisticas, // Ya no es función, es el valor memoizado
     isLoading,
     error,
     reordenarRuta,

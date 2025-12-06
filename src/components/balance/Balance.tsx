@@ -253,6 +253,8 @@ export function Balance() {
               />
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={valorEntrada}
                 onChange={(e) => setValorEntrada(e.target.value)}
                 placeholder="Valor"
@@ -368,6 +370,8 @@ export function Balance() {
               />
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={valorGasto}
                 onChange={(e) => setValorGasto(e.target.value)}
                 placeholder="Valor"
