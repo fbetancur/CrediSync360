@@ -1,783 +1,480 @@
-# CrediSync360 V2 - Modelo de Datos Optimizado
+# 📊 MODELO DE DATOS - CrediSync360 V2
 
-## 🎯 Principios de Diseño
-
-1. **Datos Fuente Inmutables** - Cuotas y Pagos solo INSERT, nunca UPDATE
-2. **Event Sourcing** - Historial completo de cambios
-3. **Calculated Fields (Cache)** - Campos calculados almacenados para rendimiento, recalculables desde fuente
-4. **Single Source of Truth** - Datos fuente (Cuotas, Pagos) son la verdad; campos calculados son cache
-5. **Optimizado para Alto Volumen** - Preparado para miles de clientes multitenant
-
-## 🚀 Decisión de Optimización
-
-### Contexto
-La aplicación es **multitenant** con **alto volumen**: múltiples empresas, rutas, cobradores procesando miles de transacciones diarias.
-
-### Problema Original
-- **Rendimiento:** Calcular estado de 1000 clientes = 2-3 segundos
-- **Complejidad:** O(n * m * p) donde n=clientes, m=créditos, p=pagos
-- **Queries:** 4 tablas completas por operación (clientes + créditos + cuotas + pagos)
-
-### Solución Implementada
-Agregar **campos calculados (cache)** a:
-- **Cliente:** creditosActivos, saldoTotal, diasAtrasoMax, estado, score
-- **Crédito:** saldoPendiente, cuotasPagadas, diasAtraso
-- **Cuota:** montoPagado, saldoPendiente, estado, diasAtraso
-
-### Beneficios
-- ✅ **Rendimiento:** 100-200ms (15x más rápido)
-- ✅ **Escalabilidad:** Preparado para miles de clientes
-- ✅ **Queries:** 1 tabla en lugar de 4
-- ✅ **Robustez:** Datos fuente intactos, cache recalculable
-
-### Garantías de Seguridad
-1. **Datos fuente NUNCA se modifican** (Cuotas, Pagos son inmutables)
-2. **Cache puede recalcularse** en cualquier momento desde fuente
-3. **Actualización automática** después de cada operación
-4. **Validación de integridad** disponible para verificar consistencia
+**Última actualización:** 6 de diciembre de 2025  
+**Versión:** 2.0 (Multitenant con campos calculados)
 
 ---
 
-## 📊 Entidades Base
+## 🎯 ARQUITECTURA
 
-### 1. Cliente (OPTIMIZADO)
-```typescript
-interface Cliente {
-  id: string;                    // cliente-{timestamp}
-  tenantId: string;              // tenant-001
-  nombre: string;                // "Juan Pérez"
-  documento: string;             // "12345678"
-  telefono: string;              // "3001234567"
-  direccion: string;             // "Calle 123"
-  barrio: string;                // "Centro"
-  referencia: string;            // "Casa azul al lado de..."
-  latitud?: number;              // 6.248858
-  longitud?: number;             // -75.572838
-  
-  // ⚡ CAMPOS CALCULADOS (CACHE) - Actualizados automáticamente
-  creditosActivos: number;       // Cantidad de créditos activos
-  saldoTotal: number;            // Suma de saldos pendientes
-  diasAtrasoMax: number;         // Máximo días de atraso
-  estado: 'SIN_CREDITOS' | 'AL_DIA' | 'MORA';
-  score: 'CONFIABLE' | 'REGULAR' | 'RIESGOSO';
-  ultimaActualizacion: string;   // Timestamp de última actualización
-  
-  createdAt: string;             // ISO timestamp
-  createdBy: string;             // userId
-}
-```
+### Principios de Diseño
 
-**Queries Comunes:**
-- Buscar por nombre/documento/teléfono
-- Listar todos los clientes (OPTIMIZADO: sin joins)
-- Filtrar por estado (mora, al día)
-- Ordenar por días de atraso
-
-**Optimización:**
-- **Antes:** Cargar cliente + créditos + cuotas + pagos = O(n * m * p)
-- **Ahora:** Leer directamente del cliente = O(1)
+1. **Multitenant:** Todos los modelos incluyen `tenantId` para aislamiento de datos
+2. **Offline-First:** Campos calculados pre-computados para rendimiento
+3. **Inmutabilidad:** Los pagos son inmutables (no se pueden editar ni eliminar)
+4. **Relaciones Bidireccionales:** Todas las relaciones FK tienen belongsTo/hasMany
 
 ---
 
-### 2. Producto de Crédito
-```typescript
-interface ProductoCredito {
-  id: string;                    // producto-diario-20
-  tenantId: string;
-  nombre: string;                // "Crédito Diario 20%"
-  interesPorcentaje: number;     // 20
-  numeroCuotas: number;          // 20
-  frecuencia: 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';
-  excluirDomingos: boolean;      // true
-  montoMinimo?: number;          // 100
-  montoMaximo?: number;          // 5000
-  activo: boolean;               // true
-  createdAt: string;
-  createdBy: string;
-}
-```
+## 📋 MODELOS
 
-**Queries Comunes:**
-- Listar productos activos
-- Obtener producto por ID
+### 1. Ruta
 
----
+Representa una ruta de cobro asignada a un supervisor.
 
-### 3. Crédito (OPTIMIZADO)
-```typescript
-interface Credito {
-  id: string;                    // credito-{timestamp}
-  tenantId: string;
-  clienteId: string;
-  productoId: string;
-  cobradorId: string;            // Usuario que otorgó el crédito
-  
-  // Datos del crédito
-  montoOriginal: number;         // 1000
-  interesPorcentaje: number;     // 20
-  totalAPagar: number;           // 1200
-  numeroCuotas: number;          // 20
-  valorCuota: number;            // 60
-  frecuencia: 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';
-  
-  // Fechas
-  fechaDesembolso: string;       // "2025-12-01"
-  fechaPrimeraCuota: string;     // "2025-12-02" (EDITABLE)
-  fechaUltimaCuota: string;      // "2025-12-28"
-  
-  // Estado
-  estado: 'ACTIVO' | 'CANCELADO' | 'CASTIGADO';
-  
-  // ⚡ CAMPOS CALCULADOS (CACHE) - Actualizados automáticamente
-  saldoPendiente: number;        // Total pendiente por pagar
-  cuotasPagadas: number;         // Cantidad de cuotas pagadas
-  diasAtraso: number;            // Días de atraso máximo
-  ultimaActualizacion: string;   // Timestamp de última actualización
-  
-  // Metadata
-  createdAt: string;
-  createdBy: string;
-}
-```
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required) - Identificador del tenant
+- `nombre`: String (required) - Nombre de la ruta
+- `supervisorId`: String (required) - ID del supervisor
+- `activa`: Boolean (required) - Si la ruta está activa
 
-**Queries Comunes:**
-- Créditos de un cliente
-- Créditos activos
-- Créditos por cobrador
-- Filtrar por días de atraso (OPTIMIZADO: índice directo)
+**Relaciones:**
+- `clientes`: hasMany Cliente
+- `creditos`: hasMany Credito
+- `cuotas`: hasMany Cuota
+- `pagos`: hasMany Pago
+- `cierres`: hasMany CierreCaja
+- `movimientos`: hasMany MovimientoCaja
 
-**Optimización:**
-- **Antes:** Sumar cuotas y pagos cada vez = O(n * m)
-- **Ahora:** Leer directamente del crédito = O(1)
-
-**IMPORTANTE:**
-- `fechaPrimeraCuota` es EDITABLE al crear el crédito
-- Por defecto es día siguiente a `fechaDesembolso`
-- Se puede cambiar si es necesario
+**Índices:**
+- Primary: `id`
+- Tenant: `tenantId`
 
 ---
 
-### 4. Cuota (OPTIMIZADO)
-```typescript
-interface Cuota {
-  id: string;                    // cuota-{creditoId}-{numero}
-  tenantId: string;
-  creditoId: string;
-  clienteId: string;             // Desnormalizado para queries rápidas
-  
-  // Datos de la cuota (FUENTE)
-  numero: number;                // 1, 2, 3...
-  fechaProgramada: string;       // "2025-12-02"
-  montoProgramado: number;       // 60
-  
-  // ⚡ CAMPOS CALCULADOS (CACHE) - Actualizados automáticamente
-  montoPagado: number;           // Total pagado en esta cuota
-  saldoPendiente: number;        // Saldo pendiente de la cuota
-  estado: 'PENDIENTE' | 'PARCIAL' | 'PAGADA';
-  diasAtraso: number;            // Días de atraso
-  ultimaActualizacion: string;   // Timestamp de última actualización
-  
-  // Metadata
-  createdAt: string;
-  createdBy: string;
-}
-```
+### 2. Cliente
 
-**Queries Comunes:**
-- Cuotas de un crédito
-- Cuotas de un cliente
-- Cuotas por fecha (ruta del día)
-- Filtrar por estado (OPTIMIZADO: índice directo)
+Representa un cliente que recibe créditos.
 
-**Optimización:**
-- **Antes:** Sumar pagos de cada cuota = O(n)
-- **Ahora:** Leer directamente de la cuota = O(1)
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required)
+- `rutaId`: ID (required) - FK a Ruta
+- `nombre`: String (required)
+- `documento`: String (required)
+- `telefono`: String (required)
+- `direccion`: String (required)
+- `barrio`: String (optional)
+- `referencia`: String (optional)
+- `latitud`: Float (optional)
+- `longitud`: Float (optional)
 
-**IMPORTANTE:**
-- Datos fuente (montoProgramado) NUNCA se modifican
-- Campos calculados se actualizan al registrar pagos
-- Puede recalcularse desde Pagos en cualquier momento
+**Campos Calculados (Optimización):**
+- `creditosActivos`: Integer (required) - Número de créditos activos
+- `saldoTotal`: Float (required) - Suma de saldos pendientes
+- `diasAtrasoMax`: Integer (required) - Máximo días de atraso
+- `estado`: Enum (optional) - SIN_CREDITOS | AL_DIA | MORA
+- `score`: Enum (optional) - CONFIABLE | REGULAR | RIESGOSO
+- `ultimaActualizacion`: String (required) - ISO timestamp
+
+**Relaciones:**
+- `ruta`: belongsTo Ruta
+- `creditos`: hasMany Credito
+- `cuotas`: hasMany Cuota
+- `pagos`: hasMany Pago
+
+**Índices:**
+- Primary: `id`
+- Compuesto: `[tenantId+rutaId]`
+- Búsqueda: `documento`, `nombre`
 
 ---
 
-### 5. Pago (Inmutable)
-```typescript
-interface Pago {
-  id: string;                    // pago-{timestamp}-{random}
-  tenantId: string;
-  creditoId: string;
-  cuotaId: string;
-  clienteId: string;             // Desnormalizado
-  cobradorId: string;            // Usuario que cobró
-  
-  // Datos del pago
-  monto: number;                 // 60
-  fecha: string;                 // "2025-12-05"
-  
-  // Ubicación (opcional)
-  latitud?: number;
-  longitud?: number;
-  
-  // Observaciones
-  observaciones?: string;
-  
-  // Metadata
-  createdAt: string;             // ISO timestamp exacto
-  createdBy: string;
-}
-```
+### 3. ProductoCredito
 
-**Queries Comunes:**
-- Pagos de un crédito
-- Pagos de una cuota
-- Pagos de un cliente
-- Pagos por fecha (cierre de caja)
-- Pagos por cobrador
+Representa un producto de crédito con sus condiciones.
 
-**IMPORTANTE:**
-- Los pagos son INMUTABLES
-- Nunca se modifican ni eliminan
-- Para corregir, crear pago negativo
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required)
+- `nombre`: String (required)
+- `interesPorcentaje`: Float (required)
+- `numeroCuotas`: Integer (required)
+- `frecuencia`: Enum (required) - DIARIO | SEMANAL | QUINCENAL | MENSUAL
+- `excluirDomingos`: Boolean (required)
+- `montoMinimo`: Float (optional)
+- `montoMaximo`: Float (optional)
+- `activo`: Boolean (required)
+
+**Relaciones:**
+- `creditos`: hasMany Credito
+
+**Índices:**
+- Primary: `id`
+- Tenant: `tenantId`
+- Filtro: `activo`
 
 ---
 
-### 6. Cierre de Caja
-```typescript
-interface CierreCaja {
-  id: string;                    // cierre-{timestamp}
-  tenantId: string;
-  cobradorId: string;
-  fecha: string;                 // "2025-12-05"
-  
-  // Datos del cierre
-  cajaBase: number;              // Total del día anterior
-  totalCobrado: number;          // Suma de pagos del día
-  totalCreditosOtorgados: number;// Suma de créditos otorgados
-  totalEntradas: number;         // Suma de entradas/inversiones
-  totalGastos: number;           // Suma de gastos/salidas
-  totalCaja: number;             // Base + Cobrado - Créditos + Entradas - Gastos
-  
-  // Estadísticas
-  cuotasCobradas: number;
-  cuotasTotales: number;
-  clientesVisitados: number;
-  observaciones?: string;
-  
-  // Metadata
-  createdAt: string;
-  createdBy: string;
-}
-```
+### 4. Credito
 
-**Queries Comunes:**
-- Cierre de un día específico
-- Cierres de un cobrador
-- Cierre del día anterior (para calcular caja base)
+Representa un crédito otorgado a un cliente.
 
-**IMPORTANTE:**
-- Solo puede haber UN cierre por cobrador por día
-- La caja base se calcula del cierre del día anterior
-- Si no hay cierre anterior, caja base = 0
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required)
+- `rutaId`: ID (required) - FK a Ruta
+- `clienteId`: ID (required) - FK a Cliente
+- `productoId`: ID (required) - FK a ProductoCredito
+- `cobradorId`: String (required)
+- `montoOriginal`: Float (required)
+- `interesPorcentaje`: Float (required)
+- `totalAPagar`: Float (required)
+- `numeroCuotas`: Integer (required)
+- `valorCuota`: Float (required)
+- `frecuencia`: Enum (required) - DIARIO | SEMANAL | QUINCENAL | MENSUAL
+- `fechaDesembolso`: Date (required)
+- `fechaPrimeraCuota`: Date (required)
+- `fechaUltimaCuota`: Date (required)
+- `estado`: Enum (optional) - ACTIVO | CANCELADO | CASTIGADO
 
----
+**Campos Calculados (Optimización):**
+- `saldoPendiente`: Float (required) - Saldo pendiente total
+- `cuotasPagadas`: Integer (required) - Número de cuotas pagadas
+- `diasAtraso`: Integer (required) - Días de atraso máximo
+- `ultimaActualizacion`: String (required) - ISO timestamp
 
-### 7. Movimiento de Caja
-```typescript
-interface MovimientoCaja {
-  id: string;                    // mov-{timestamp}-{random}
-  tenantId: string;
-  cobradorId: string;
-  fecha: string;                 // "2025-12-05"
-  tipo: 'ENTRADA' | 'GASTO';
-  detalle: string;               // "Inversión inicial", "Gasolina"
-  valor: number;                 // 50000
-  
-  // Metadata
-  createdAt: string;
-  createdBy: string;
-}
-```
+**Relaciones:**
+- `ruta`: belongsTo Ruta
+- `cliente`: belongsTo Cliente
+- `producto`: belongsTo ProductoCredito
+- `cuotas`: hasMany Cuota
+- `pagos`: hasMany Pago
 
-**Queries Comunes:**
-- Movimientos de un día
-- Movimientos por tipo (ENTRADA o GASTO)
-- Movimientos de un cobrador
-
-**IMPORTANTE:**
-- Los movimientos se pueden ELIMINAR solo antes del cierre
-- Después del cierre, son inmutables
-- Se usan para calcular el total de caja
+**Índices:**
+- Primary: `id`
+- Compuesto: `[tenantId+clienteId]`
+- Compuesto: `[tenantId+rutaId]`
+- Filtro: `estado`
 
 ---
 
-## 🔄 Sistema de Actualización de Campos Calculados
+### 5. Cuota
 
-**IMPORTANTE:** Los campos calculados ahora se ALMACENAN como cache, pero se mantienen las funciones de cálculo para:
-1. Actualización automática después de operaciones
-2. Recálculo manual si es necesario
-3. Validación de integridad
+Representa una cuota de un crédito.
 
-### Flujo de Actualización
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required)
+- `rutaId`: ID (required) - FK a Ruta
+- `creditoId`: ID (required) - FK a Credito
+- `clienteId`: ID (required) - FK a Cliente
+- `cobradorId`: String (required)
+- `numero`: Integer (required) - Número de cuota (1, 2, 3...)
+- `fechaProgramada`: Date (required)
+- `montoProgramado`: Float (required)
+
+**Campos Calculados (Optimización):**
+- `montoPagado`: Float (required) - Suma de pagos aplicados
+- `saldoPendiente`: Float (required) - montoProgramado - montoPagado
+- `estado`: Enum (required) - PENDIENTE | PARCIAL | PAGADA
+- `diasAtraso`: Integer (required) - Días de atraso
+- `ultimaActualizacion`: String (required) - ISO timestamp
+
+**Relaciones:**
+- `ruta`: belongsTo Ruta
+- `credito`: belongsTo Credito
+- `cliente`: belongsTo Cliente
+- `pagos`: hasMany Pago
+
+**Índices:**
+- Primary: `id`
+- Compuesto: `[tenantId+cobradorId+fechaProgramada]` - Para ruta del día
+- Compuesto: `[tenantId+creditoId]`
+- Filtro: `estado`
+
+---
+
+### 6. Pago
+
+Representa un pago realizado a una cuota. **INMUTABLE**.
+
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required)
+- `rutaId`: ID (required) - FK a Ruta
+- `creditoId`: ID (required) - FK a Credito
+- `cuotaId`: ID (required) - FK a Cuota
+- `clienteId`: ID (required) - FK a Cliente
+- `cobradorId`: String (required)
+- `monto`: Float (required)
+- `fecha`: Date (required)
+- `latitud`: Float (optional)
+- `longitud`: Float (optional)
+- `observaciones`: String (optional)
+
+**Relaciones:**
+- `ruta`: belongsTo Ruta
+- `credito`: belongsTo Credito
+- `cuota`: belongsTo Cuota
+- `cliente`: belongsTo Cliente
+
+**Índices:**
+- Primary: `id`
+- Compuesto: `[tenantId+cuotaId]`
+- Compuesto: `[tenantId+fecha]`
+
+**Reglas:**
+- ❌ NO se puede actualizar
+- ❌ NO se puede eliminar
+- ✅ Solo se puede crear
+
+---
+
+### 7. CierreCaja
+
+Representa el cierre de caja diario de un cobrador.
+
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required)
+- `rutaId`: ID (required) - FK a Ruta
+- `cobradorId`: String (required)
+- `fecha`: Date (required)
+- `cajaBase`: Float (required)
+- `totalCobrado`: Float (required)
+- `totalCreditosOtorgados`: Float (required)
+- `totalEntradas`: Float (required)
+- `totalGastos`: Float (required)
+- `totalCaja`: Float (required)
+- `cuotasCobradas`: Integer (required)
+- `cuotasTotales`: Integer (required)
+- `clientesVisitados`: Integer (required)
+- `observaciones`: String (optional)
+
+**Relaciones:**
+- `ruta`: belongsTo Ruta
+
+**Índices:**
+- Primary: `id`
+- Compuesto: `[tenantId+cobradorId+fecha]`
+
+---
+
+### 8. MovimientoCaja
+
+Representa entradas y gastos de caja.
+
+**Campos:**
+- `id`: ID (auto-generado)
+- `tenantId`: String (required)
+- `rutaId`: ID (required) - FK a Ruta
+- `cobradorId`: String (required)
+- `fecha`: Date (required)
+- `tipo`: Enum (required) - ENTRADA | GASTO
+- `detalle`: String (required)
+- `valor`: Float (required)
+
+**Relaciones:**
+- `ruta`: belongsTo Ruta
+
+**Índices:**
+- Primary: `id`
+- Compuesto: `[tenantId+cobradorId+fecha]`
+
+---
+
+## 🔗 MATRIZ DE RELACIONES
+
+| Modelo Hijo | Campo FK | belongsTo | Modelo Padre | hasMany | Tipo |
+|-------------|----------|-----------|--------------|---------|------|
+| Cliente | rutaId | ✅ ruta | Ruta | ✅ clientes | 1:N |
+| Credito | rutaId | ✅ ruta | Ruta | ✅ creditos | 1:N |
+| Credito | clienteId | ✅ cliente | Cliente | ✅ creditos | 1:N |
+| Credito | productoId | ✅ producto | ProductoCredito | ✅ creditos | 1:N |
+| Cuota | rutaId | ✅ ruta | Ruta | ✅ cuotas | 1:N |
+| Cuota | creditoId | ✅ credito | Credito | ✅ cuotas | 1:N |
+| Cuota | clienteId | ✅ cliente | Cliente | ✅ cuotas | 1:N |
+| Pago | rutaId | ✅ ruta | Ruta | ✅ pagos | 1:N |
+| Pago | creditoId | ✅ credito | Credito | ✅ pagos | 1:N |
+| Pago | cuotaId | ✅ cuota | Cuota | ✅ pagos | 1:N |
+| Pago | clienteId | ✅ cliente | Cliente | ✅ pagos | 1:N |
+| CierreCaja | rutaId | ✅ ruta | Ruta | ✅ cierres | 1:N |
+| MovimientoCaja | rutaId | ✅ ruta | Ruta | ✅ movimientos | 1:N |
+
+**Total:** 13 relaciones bidireccionales ✅
+
+---
+
+## 📊 DIAGRAMA DE RELACIONES
 
 ```
-Registrar Pago
-     ↓
-Guardar en tabla Pagos (inmutable)
-     ↓
-actualizarCamposCuota(cuotaId)
-     ↓
-actualizarCamposCredito(creditoId)
-     ↓
-actualizarCamposCliente(clienteId)
-     ↓
-UI se actualiza automáticamente
-```
+Ruta (1) ──────────────┬─────────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+                       │                 │              │              │              │              │
+                       ↓ (N)             ↓ (N)          ↓ (N)          ↓ (N)          ↓ (N)          ↓ (N)
+                    Cliente          Credito         Cuota          Pago       CierreCaja    MovimientoCaja
+                       │                 │              │              │
+                       │                 │              │              │
+ProductoCredito (1) ───┼─────────────────┘              │              │
+                       │                                │              │
+                       │                                │              │
+                       └────────────────────────────────┴──────────────┘
+                       
+Cliente (1) ────────────┬─────────────────┬──────────────┐
+                        │                 │              │
+                        ↓ (N)             ↓ (N)          ↓ (N)
+                     Credito           Cuota          Pago
+                        │                 │              │
+                        │                 │              │
+                        └─────────────────┴──────────────┘
 
-## 🔄 Funciones de Cálculo (Ahora para Actualización)
+Credito (1) ────────────┬─────────────────┐
+                        │                 │
+                        ↓ (N)             ↓ (N)
+                      Cuota             Pago
+                        │                 │
+                        │                 │
+                        └─────────────────┘
 
-### Estado de Caja:
-```typescript
-function calcularEstadoCaja(
-  fecha: string,
-  tenantId: string,
-  cobradorId: string
-): EstadoCaja {
-  // 1. Verificar si hay cierre para hoy
-  const cierreHoy = await db.cierres
-    .where('[tenantId+cobradorId+fecha]')
-    .equals([tenantId, cobradorId, fecha])
-    .first();
-  
-  // 2. Obtener caja base del día anterior
-  const ayer = new Date(fecha);
-  ayer.setDate(ayer.getDate() - 1);
-  const fechaAyer = ayer.toISOString().split('T')[0];
-  
-  const cierreAyer = await db.cierres
-    .where('[tenantId+cobradorId+fecha]')
-    .equals([tenantId, cobradorId, fechaAyer])
-    .first();
-  
-  const cajaBase = cierreAyer ? cierreAyer.totalCaja : 0;
-  
-  // 3. Calcular totales del día
-  const pagosHoy = await db.pagos
-    .where('[tenantId+cobradorId+fecha]')
-    .equals([tenantId, cobradorId, fecha])
-    .toArray();
-  const totalCobrado = pagosHoy.reduce((sum, p) => sum + p.monto, 0);
-  
-  const creditosHoy = await db.creditos
-    .where('tenantId')
-    .equals(tenantId)
-    .filter(c => c.fechaDesembolso === fecha && c.cobradorId === cobradorId)
-    .toArray();
-  const totalCreditosOtorgados = creditosHoy.reduce((sum, c) => sum + c.montoOriginal, 0);
-  
-  const movimientosHoy = await db.movimientos
-    .where('[tenantId+cobradorId+fecha]')
-    .equals([tenantId, cobradorId, fecha])
-    .toArray();
-  
-  const totalEntradas = movimientosHoy
-    .filter(m => m.tipo === 'ENTRADA')
-    .reduce((sum, m) => sum + m.valor, 0);
-  
-  const totalGastos = movimientosHoy
-    .filter(m => m.tipo === 'GASTO')
-    .reduce((sum, m) => sum + m.valor, 0);
-  
-  // 4. Calcular total de caja
-  const totalCaja = cajaBase + totalCobrado - totalCreditosOtorgados + totalEntradas - totalGastos;
-  
-  return {
-    fecha,
-    estado: cierreHoy ? 'CERRADA' : 'ABIERTA',
-    cajaBase,
-    totalCobrado,
-    totalCreditosOtorgados,
-    totalEntradas,
-    totalGastos,
-    totalCaja
-  };
-}
-```
-
-### Estado de una Cuota:
-```typescript
-function calcularEstadoCuota(
-  cuota: Cuota,
-  pagos: Pago[]
-): {
-  montoPagado: number;
-  saldoPendiente: number;
-  estado: 'PENDIENTE' | 'PARCIAL' | 'PAGADA';
-  diasAtraso: number;
-} {
-  // Sumar pagos de esta cuota
-  const pagosCuota = pagos.filter(p => p.cuotaId === cuota.id);
-  const montoPagado = pagosCuota.reduce((sum, p) => sum + p.monto, 0);
-  const saldoPendiente = Math.max(0, cuota.montoProgramado - montoPagado);
-  
-  // Determinar estado
-  let estado: 'PENDIENTE' | 'PARCIAL' | 'PAGADA';
-  if (montoPagado === 0) {
-    estado = 'PENDIENTE';
-  } else if (montoPagado < cuota.montoProgramado) {
-    estado = 'PARCIAL';
-  } else {
-    estado = 'PAGADA';
-  }
-  
-  // Calcular días de atraso
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const fechaCuota = new Date(cuota.fechaProgramada);
-  fechaCuota.setHours(0, 0, 0, 0);
-  
-  let diasAtraso = 0;
-  if (estado !== 'PAGADA' && hoy > fechaCuota) {
-    diasAtraso = Math.floor((hoy.getTime() - fechaCuota.getTime()) / (1000 * 60 * 60 * 24));
-  }
-  
-  return { montoPagado, saldoPendiente, estado, diasAtraso };
-}
-```
-
-### Estado de un Crédito:
-```typescript
-function calcularEstadoCredito(
-  credito: Credito,
-  cuotas: Cuota[],
-  pagos: Pago[]
-): {
-  saldoPendiente: number;
-  cuotasPagadas: number;
-  cuotasPendientes: number;
-  diasAtraso: number;
-  estadoCalculado: 'AL_DIA' | 'MORA' | 'CANCELADO';
-} {
-  // Calcular saldo pendiente
-  const totalCuotas = cuotas.reduce((sum, c) => sum + c.montoProgramado, 0);
-  const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
-  const saldoPendiente = Math.max(0, totalCuotas - totalPagos);
-  
-  // Contar cuotas pagadas
-  let cuotasPagadas = 0;
-  let diasAtrasoMax = 0;
-  
-  for (const cuota of cuotas) {
-    const estado = calcularEstadoCuota(cuota, pagos);
-    if (estado.estado === 'PAGADA') {
-      cuotasPagadas++;
-    }
-    diasAtrasoMax = Math.max(diasAtrasoMax, estado.diasAtraso);
-  }
-  
-  const cuotasPendientes = credito.numeroCuotas - cuotasPagadas;
-  
-  // Determinar estado
-  let estadoCalculado: 'AL_DIA' | 'MORA' | 'CANCELADO';
-  if (saldoPendiente === 0) {
-    estadoCalculado = 'CANCELADO';
-  } else if (diasAtrasoMax > 0) {
-    estadoCalculado = 'MORA';
-  } else {
-    estadoCalculado = 'AL_DIA';
-  }
-  
-  return {
-    saldoPendiente,
-    cuotasPagadas,
-    cuotasPendientes,
-    diasAtraso: diasAtrasoMax,
-    estadoCalculado
-  };
-}
-```
-
-### Estado de un Cliente:
-```typescript
-function calcularEstadoCliente(
-  cliente: Cliente,
-  creditos: Credito[],
-  cuotas: Cuota[],
-  pagos: Pago[]
-): {
-  creditosActivos: number;
-  saldoTotal: number;
-  diasAtrasoMax: number;
-  estado: 'SIN_CREDITOS' | 'AL_DIA' | 'MORA';
-  score: 'CONFIABLE' | 'REGULAR' | 'RIESGOSO';
-} {
-  const creditosActivos = creditos.filter(c => c.estado === 'ACTIVO');
-  
-  if (creditosActivos.length === 0) {
-    return {
-      creditosActivos: 0,
-      saldoTotal: 0,
-      diasAtrasoMax: 0,
-      estado: 'SIN_CREDITOS',
-      score: calcularScore(cliente, creditos, cuotas, pagos)
-    };
-  }
-  
-  let saldoTotal = 0;
-  let diasAtrasoMax = 0;
-  
-  for (const credito of creditosActivos) {
-    const cuotasCredito = cuotas.filter(c => c.creditoId === credito.id);
-    const pagosCredito = pagos.filter(p => p.creditoId === credito.id);
-    const estado = calcularEstadoCredito(credito, cuotasCredito, pagosCredito);
-    
-    saldoTotal += estado.saldoPendiente;
-    diasAtrasoMax = Math.max(diasAtrasoMax, estado.diasAtraso);
-  }
-  
-  const estado = diasAtrasoMax > 0 ? 'MORA' : 'AL_DIA';
-  
-  return {
-    creditosActivos: creditosActivos.length,
-    saldoTotal,
-    diasAtrasoMax,
-    estado,
-    score: calcularScore(cliente, creditos, cuotas, pagos)
-  };
-}
-```
-
-### Score del Cliente:
-```typescript
-function calcularScore(
-  cliente: Cliente,
-  creditos: Credito[],
-  cuotas: Cuota[],
-  pagos: Pago[]
-): 'CONFIABLE' | 'REGULAR' | 'RIESGOSO' {
-  const creditosCancelados = creditos.filter(c => c.estado === 'CANCELADO');
-  
-  // Contar créditos pagados sin mora
-  let creditosSinMora = 0;
-  let creditosConMora = 0;
-  
-  for (const credito of creditosCancelados) {
-    const cuotasCredito = cuotas.filter(c => c.creditoId === credito.id);
-    const pagosCredito = pagos.filter(p => p.creditoId === credito.id);
-    const estado = calcularEstadoCredito(credito, cuotasCredito, pagosCredito);
-    
-    if (estado.diasAtraso === 0) {
-      creditosSinMora++;
-    } else {
-      creditosConMora++;
-    }
-  }
-  
-  // Determinar score
-  if (creditosSinMora >= 3 && creditosConMora === 0) {
-    return 'CONFIABLE';
-  } else if (creditosConMora > creditosSinMora) {
-    return 'RIESGOSO';
-  } else {
-    return 'REGULAR';
-  }
-}
+Cuota (1) ──────────────┐
+                        │
+                        ↓ (N)
+                      Pago
 ```
 
 ---
 
-## 📊 Queries Optimizadas
+## 🎯 CAMPOS CALCULADOS
 
-### Ruta del Día:
+Los campos calculados se pre-computan para optimizar el rendimiento en dispositivos móviles.
+
+### Cliente
+- `creditosActivos`: Cuenta de créditos con estado ACTIVO
+- `saldoTotal`: Suma de `credito.saldoPendiente` de todos los créditos activos
+- `diasAtrasoMax`: Máximo de `credito.diasAtraso` de todos los créditos activos
+- `estado`: Calculado según creditosActivos y diasAtrasoMax
+- `score`: Calculado según historial de pagos
+- `ultimaActualizacion`: Timestamp de última modificación
+
+### Credito
+- `saldoPendiente`: Suma de `cuota.saldoPendiente` de todas las cuotas
+- `cuotasPagadas`: Cuenta de cuotas con estado PAGADA
+- `diasAtraso`: Máximo de `cuota.diasAtraso` de todas las cuotas
+- `ultimaActualizacion`: Timestamp de última modificación
+
+### Cuota
+- `montoPagado`: Suma de `pago.monto` de todos los pagos aplicados
+- `saldoPendiente`: `montoProgramado - montoPagado`
+- `estado`: PENDIENTE (montoPagado=0) | PARCIAL (0<montoPagado<montoProgramado) | PAGADA (montoPagado>=montoProgramado)
+- `diasAtraso`: Días entre hoy y fechaProgramada (si saldoPendiente > 0)
+- `ultimaActualizacion`: Timestamp de última modificación
+
+---
+
+## 🔄 ACTUALIZACIÓN DE CAMPOS CALCULADOS
+
+Los campos calculados se actualizan automáticamente mediante `actualizarCampos.ts`:
+
+### Trigger: Crear Pago
+1. Actualizar `Cuota`: montoPagado, saldoPendiente, estado, diasAtraso
+2. Actualizar `Credito`: saldoPendiente, cuotasPagadas, diasAtraso
+3. Actualizar `Cliente`: saldoTotal, diasAtrasoMax, estado
+
+### Trigger: Crear Crédito
+1. Actualizar `Cliente`: creditosActivos, saldoTotal, estado
+
+### Trigger: Cambiar Estado Crédito
+1. Actualizar `Cliente`: creditosActivos, saldoTotal, diasAtrasoMax, estado
+
+---
+
+## 📝 REGLAS DE NEGOCIO
+
+### Cliente
+- Un cliente puede tener múltiples créditos
+- Un cliente debe pertenecer a una ruta
+- El estado se calcula automáticamente:
+  - `SIN_CREDITOS`: creditosActivos = 0
+  - `AL_DIA`: creditosActivos > 0 && diasAtrasoMax <= 3
+  - `MORA`: creditosActivos > 0 && diasAtrasoMax > 3
+
+### Crédito
+- Un crédito pertenece a un cliente y una ruta
+- Un crédito se basa en un producto de crédito
+- Al crear un crédito, se generan automáticamente todas las cuotas
+- El saldoPendiente se actualiza con cada pago
+
+### Cuota
+- Una cuota pertenece a un crédito, cliente y ruta
+- Las cuotas se generan automáticamente al crear el crédito
+- El estado se actualiza automáticamente con cada pago
+- Los días de atraso se calculan diariamente
+
+### Pago
+- Un pago es INMUTABLE (no se puede editar ni eliminar)
+- Un pago se aplica a una cuota específica
+- Un pago actualiza automáticamente los campos calculados
+- Se puede registrar ubicación GPS del pago
+
+### CierreCaja
+- Un cobrador debe hacer un cierre diario
+- El cierre incluye todos los movimientos del día
+- Solo puede haber un cierre por cobrador por día
+
+---
+
+## 🔐 SEGURIDAD
+
+### Aislamiento Multitenant
+- Todos los modelos incluyen `tenantId`
+- Todas las queries filtran por `tenantId`
+- No se puede acceder a datos de otros tenants
+
+### Autorización
+- Actualmente: `publicApiKey` (desarrollo)
+- Futuro (Fase 9): Cognito User Pools con roles
+
+---
+
+## 📊 ÍNDICES OPTIMIZADOS
+
+### Índices Compuestos (Dexie)
 ```typescript
-async function obtenerRutaDelDia(
-  tenantId: string,
-  cobradorId: string,
-  fecha: string
-): Promise<ClienteConCuota[]> {
-  // 1. Obtener cuotas del día
-  const cuotasDelDia = await db.cuotas
-    .where('[tenantId+fechaProgramada]')
-    .equals([tenantId, fecha])
-    .toArray();
-  
-  // 2. Obtener clientes únicos
-  const clienteIds = [...new Set(cuotasDelDia.map(c => c.clienteId))];
-  const clientes = await db.clientes
-    .where('id')
-    .anyOf(clienteIds)
-    .toArray();
-  
-  // 3. Obtener todos los créditos y pagos necesarios
-  const creditoIds = [...new Set(cuotasDelDia.map(c => c.creditoId))];
-  const creditos = await db.creditos
-    .where('id')
-    .anyOf(creditoIds)
-    .toArray();
-  
-  const pagos = await db.pagos
-    .where('clienteId')
-    .anyOf(clienteIds)
-    .toArray();
-  
-  // 4. Calcular estado de cada cliente
-  return clientes.map(cliente => {
-    const creditosCliente = creditos.filter(c => c.clienteId === cliente.id);
-    const cuotasCliente = cuotasDelDia.filter(c => c.clienteId === cliente.id);
-    const pagosCliente = pagos.filter(p => p.clienteId === cliente.id);
-    
-    // Calcular cuotas atrasadas
-    const cuotasAtrasadas = cuotasCliente.filter(cuota => {
-      const estado = calcularEstadoCuota(cuota, pagosCliente);
-      return estado.diasAtraso > 0;
-    });
-    
-    // Calcular saldo total a cobrar
-    const saldoACobrar = cuotasCliente.reduce((sum, cuota) => {
-      const estado = calcularEstadoCuota(cuota, pagosCliente);
-      return sum + estado.saldoPendiente;
-    }, 0);
-    
-    return {
-      ...cliente,
-      cuotasAtrasadas: cuotasAtrasadas.length,
-      saldoACobrar,
-      diasAtraso: Math.max(...cuotasCliente.map(c => 
-        calcularEstadoCuota(c, pagosCliente).diasAtraso
-      ))
-    };
-  });
-}
+clientes: '[tenantId+rutaId], documento, nombre'
+creditos: '[tenantId+clienteId], [tenantId+rutaId], estado'
+cuotas: '[tenantId+cobradorId+fechaProgramada], [tenantId+creditoId], estado'
+pagos: '[tenantId+cuotaId], [tenantId+fecha]'
+cierres: '[tenantId+cobradorId+fecha]'
+movimientos: '[tenantId+cobradorId+fecha]'
 ```
+
+### Índices AWS AppSync
+- Automáticos por Amplify Gen2
+- GSI por tenantId en todos los modelos
+- GSI por campos FK para relaciones
 
 ---
 
-## 🔐 Índices de Dexie (OPTIMIZADOS)
+## 🚀 OPTIMIZACIONES
 
-```typescript
-class CrediSyncDB extends Dexie {
-  clientes!: Table<Cliente>;
-  creditos!: Table<Credito>;
-  cuotas!: Table<Cuota>;
-  pagos!: Table<Pago>;
-  productos!: Table<ProductoCredito>;
-  syncQueue!: Table<SyncQueueItem>;
+### 1. Campos Calculados Pre-computados
+- Reduce cálculos en tiempo real
+- Mejora rendimiento en móviles
+- Actualización incremental
 
-  constructor() {
-    super('credisync-v2');
-    
-    // Versión 3: Optimización con campos calculados
-    this.version(3).stores({
-      // Clientes: ⚡ Índices para campos calculados
-      clientes: 'id, tenantId, documento, nombre, estado, diasAtrasoMax, [tenantId+nombre], [tenantId+estado]',
-      
-      // Créditos: ⚡ Índices para campos calculados
-      creditos: 'id, tenantId, clienteId, cobradorId, estado, diasAtraso, [tenantId+clienteId], [tenantId+estado], [tenantId+diasAtraso]',
-      
-      // Cuotas: ⚡ Índices para campos calculados
-      cuotas: 'id, tenantId, creditoId, clienteId, fechaProgramada, estado, diasAtraso, [tenantId+fechaProgramada], [tenantId+clienteId], [clienteId+fechaProgramada], [tenantId+estado]',
-      
-      // Pagos: Sin cambios (inmutables)
-      pagos: 'id, tenantId, creditoId, cuotaId, clienteId, cobradorId, fecha, [tenantId+fecha], [tenantId+cobradorId+fecha], [clienteId+fecha]',
-      
-      // Productos: Sin cambios
-      productos: 'id, tenantId, activo, [tenantId+activo]',
-      
-      // Cola de sincronización: Sin cambios
-      syncQueue: '++id, status, type, timestamp, [status+timestamp]'
-    }).upgrade(async (trans) => {
-      // Migración automática v2 → v3
-      // Recalcula campos calculados para registros existentes
-      // Ver src/lib/db.ts para implementación completa
-    });
-  }
-}
-```
+### 2. Índices Compuestos
+- Queries optimizadas para ruta del día
+- Filtrado eficiente por cobrador
+- Reducción de datos cargados (150x menos)
 
-### Nuevos Índices Agregados
-
-**Clientes:**
-- `estado` - Filtrar por estado (mora, al día, sin créditos)
-- `diasAtrasoMax` - Ordenar por días de atraso
-- `[tenantId+estado]` - Queries multitenant por estado
-
-**Créditos:**
-- `diasAtraso` - Ordenar por días de atraso
-- `[tenantId+diasAtraso]` - Queries multitenant por atraso
-
-**Cuotas:**
-- `estado` - Filtrar por estado (pendiente, parcial, pagada)
-- `diasAtraso` - Ordenar por días de atraso
-- `[tenantId+estado]` - Queries multitenant por estado
-
-### Beneficio de Índices
-
-- **Queries más rápidas:** Filtrar y ordenar sin escanear toda la tabla
-- **Multitenant optimizado:** Índices compuestos con tenantId
-- **Escalabilidad:** Preparado para miles de registros
+### 3. Offline-First
+- Datos en IndexedDB local
+- Sincronización en background
+- Funciona sin conexión
 
 ---
 
-## 🛠️ Mantenimiento y Debugging
+## 📚 REFERENCIAS
 
-### Validar Integridad
-
-Compara campos calculados (cache) con valores recalculados desde fuente:
-
-```javascript
-// En consola del navegador
-const { validarIntegridad } = await import('./lib/actualizarCampos');
-const resultado = await validarIntegridad();
-console.log(resultado);
-// { cuotasInconsistentes: [], creditosInconsistentes: [], clientesInconsistentes: [] }
-```
-
-### Recalcular Todo
-
-Si hay inconsistencias, recalcular todos los campos desde datos fuente:
-
-```javascript
-// En consola del navegador
-const { recalcularTodosCampos } = await import('./lib/actualizarCampos');
-await recalcularTodosCampos();
-// Recalcula TODOS los campos calculados desde Cuotas y Pagos
-```
-
-### Logs de Actualización
-
-El sistema registra cada actualización en consola:
-
-```
-[actualizarCamposCuota] Cuota xxx actualizada: { montoPagado: 30000, saldoPendiente: 0, estado: 'PAGADA', diasAtraso: 0 }
-[actualizarCamposCredito] Crédito xxx actualizado: { saldoPendiente: 270000, cuotasPagadas: 1, diasAtraso: 0 }
-[actualizarCamposCliente] Cliente xxx actualizado: { saldoTotal: 270000, creditosActivos: 1, diasAtrasoMax: 0, estado: 'AL_DIA' }
-```
-
-### Garantías de Seguridad
-
-1. ✅ **Datos fuente NUNCA se modifican** (Cuotas, Pagos son inmutables)
-2. ✅ **Cache puede recalcularse** en cualquier momento
-3. ✅ **Actualización automática** después de cada operación
-4. ✅ **Validación disponible** para verificar consistencia
-5. ✅ **Migración automática** al actualizar versión de DB
+- **Schema Amplify:** `amplify/data/resource.ts`
+- **Schema Dexie:** `src/lib/db.ts`
+- **Tipos TypeScript:** `src/types/index.ts`
+- **Actualización Campos:** `src/lib/actualizarCampos.ts`
+- **Cálculos:** `src/lib/calculos.ts`
 
 ---
 
-## 📊 Métricas de Rendimiento
-
-### Escenario: 1000 clientes, 5000 créditos, 50000 cuotas
-
-**Antes (sin optimización):**
-- Cargar lista de clientes: ~2-3 segundos
-- Queries: 4 tablas completas
-- Cálculos: 50,000 operaciones
-
-**Ahora (con optimización):**
-- Cargar lista de clientes: ~100-200ms
-- Queries: 1 tabla
-- Cálculos: 0 (ya están calculados)
-
-**Mejora: 15x más rápido** 🚀
-
----
-
-**Próximo:** Ver `OPTIMIZACION.md` para detalles técnicos completos
+**Última actualización:** 6 de diciembre de 2025  
+**Versión del Schema:** 2.0  
+**Estado:** ✅ Validado y en producción

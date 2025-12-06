@@ -134,6 +134,7 @@ const schema = a.schema({
       // Relaciones
       ruta: a.belongsTo("Ruta", "rutaId"),
       credito: a.belongsTo("Credito", "creditoId"),
+      cliente: a.belongsTo("Cliente", "clienteId"),
       pagos: a.hasMany("Pago", "cuotaId"),
     })
     .authorization((allow) => [
@@ -161,6 +162,7 @@ const schema = a.schema({
       ruta: a.belongsTo("Ruta", "rutaId"),
       credito: a.belongsTo("Credito", "creditoId"),
       cuota: a.belongsTo("Cuota", "cuotaId"),
+      cliente: a.belongsTo("Cliente", "clienteId"),
     })
     .authorization((allow) => [
       allow.publicApiKey(),
