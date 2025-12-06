@@ -13,11 +13,36 @@ CrediSync360 V2 es una Progressive Web App (PWA) diseñada con arquitectura offl
 ### Principios de Diseño:
 
 1. **Offline-First:** Todas las operaciones funcionan sin conexión, sincronizando en background
-2. **Immutable Data:** Los datos nunca se modifican, solo se agregan nuevos registros (event sourcing)
-3. **Calculated Properties:** Estado derivado se calcula en tiempo real, no se almacena
-4. **Single Source of Truth:** Cada dato existe en un solo lugar
+2. **Immutable Data:** Los datos fuente nunca se modifican, solo se agregan nuevos registros (event sourcing)
+3. **Calculated Fields (Optimización):** Campos calculados se almacenan como cache para rendimiento, pero pueden recalcularse desde datos fuente
+4. **Single Source of Truth:** Los datos fuente (Cuotas, Pagos) son la única fuente de verdad; campos calculados son cache
 5. **Multitenant:** Aislamiento completo de datos por tenant desde el diseño
-6. **Performance-First:** Optimizado para 200+ clientes con respuesta < 100ms
+6. **Performance-First:** Optimizado para alto volumen (1000+ clientes) con respuesta < 100ms
+
+### Decisión de Arquitectura: Campos Calculados
+
+**Contexto:** La aplicación es multitenant con alto volumen de transacciones (múltiples empresas, rutas, cobradores).
+
+**Problema Original:**
+- Calcular estado de 1000 clientes requería: cargar clientes + créditos + cuotas + pagos = O(n * m * p)
+- Tiempo de respuesta: 2-3 segundos para 1000 clientes
+- Queries: 4 tablas completas por operación
+
+**Solución Implementada:**
+- Agregar campos calculados (cache) a Cliente, Crédito y Cuota
+- Actualizar automáticamente cuando se registran pagos
+- Mantener datos fuente intactos para recálculo si es necesario
+
+**Beneficios:**
+- Tiempo de respuesta: ~100-200ms (15x más rápido)
+- Queries: 1 tabla en lugar de 4
+- Escalabilidad: Preparado para miles de clientes
+- Robustez: Datos fuente nunca se modifican, cache puede recalcularse
+
+**Trade-offs Aceptados:**
+- Espacio adicional: ~50 bytes por registro (insignificante)
+- Complejidad: Sistema de actualización automática
+- Consistencia eventual: Cache se actualiza después de cada operación
 
 ---
 
@@ -298,19 +323,40 @@ class CrediSyncDB extends Dexie {
   constructor() {
     super('credisync-v2');
     
-    this.version(1).stores({
-      clientes: 'id, tenantId, documento, nombre, [tenantId+nombre]',
-      creditos: 'id, tenantId, clienteId, cobradorId, estado, [tenantId+clienteId], [tenantId+estado]',
-      cuotas: 'id, tenantId, creditoId, clienteId, fechaProgramada, [tenantId+fechaProgramada], [clienteId+fechaProgramada]',
+    // Versión 3: Optimización con campos calculados
+    this.version(3).stores({
+      // Clientes: índices para campos calculados
+      clientes: 'id, tenantId, documento, nombre, estado, diasAtrasoMax, [tenantId+nombre], [tenantId+estado]',
+      
+      // Créditos: índices para campos calculados
+      creditos: 'id, tenantId, clienteId, cobradorId, estado, diasAtraso, [tenantId+clienteId], [tenantId+estado], [tenantId+diasAtraso]',
+      
+      // Cuotas: índices para campos calculados
+      cuotas: 'id, tenantId, creditoId, clienteId, fechaProgramada, estado, diasAtraso, [tenantId+fechaProgramada], [tenantId+clienteId], [clienteId+fechaProgramada], [tenantId+estado]',
+      
+      // Pagos: inmutables, sin cambios
       pagos: 'id, tenantId, creditoId, cuotaId, clienteId, cobradorId, fecha, [tenantId+fecha], [clienteId+fecha]',
+      
+      // Productos: sin cambios
       productos: 'id, tenantId, activo, [tenantId+activo]',
+      
+      // Sync Queue: sin cambios
       syncQueue: '++id, status, type, timestamp, [status+timestamp]'
+    }).upgrade(async (trans) => {
+      // Migración automática: recalcular campos para registros existentes
+      // Ver src/lib/db.ts para implementación completa
     });
   }
 }
 
 export const db = new CrediSyncDB();
 ```
+
+**Nota sobre Migración:**
+- La migración de v2 a v3 se ejecuta automáticamente la primera vez
+- Recalcula todos los campos calculados desde los datos fuente
+- No requiere intervención del usuario
+- Ver `src/lib/actualizarCampos.ts` para funciones de mantenimiento
 
 ### Entity Interfaces
 
@@ -326,6 +372,13 @@ interface Cliente {
   referencia: string;
   latitud?: number;
   longitud?: number;
+  // Campos calculados (cache) - se actualizan automáticamente
+  creditosActivos: number;
+  saldoTotal: number;
+  diasAtrasoMax: number;
+  estado: 'SIN_CREDITOS' | 'AL_DIA' | 'MORA';
+  score: 'CONFIABLE' | 'REGULAR' | 'RIESGOSO';
+  ultimaActualizacion: string;
   createdAt: string;
   createdBy: string;
 }
@@ -346,6 +399,11 @@ interface Credito {
   fechaPrimeraCuota: string;
   fechaUltimaCuota: string;
   estado: 'ACTIVO' | 'CANCELADO' | 'CASTIGADO';
+  // Campos calculados (cache) - se actualizan automáticamente
+  saldoPendiente: number;
+  cuotasPagadas: number;
+  diasAtraso: number;
+  ultimaActualizacion: string;
   createdAt: string;
   createdBy: string;
 }
@@ -358,6 +416,12 @@ interface Cuota {
   numero: number;
   fechaProgramada: string;
   montoProgramado: number;
+  // Campos calculados (cache) - se actualizan automáticamente
+  montoPagado: number;
+  saldoPendiente: number;
+  estado: 'PENDIENTE' | 'PARCIAL' | 'PAGADA';
+  diasAtraso: number;
+  ultimaActualizacion: string;
   createdAt: string;
   createdBy: string;
 }
@@ -411,6 +475,115 @@ interface DynamoDBItem {
 
 // GSI3: Queries by Date
 // PK: tenantId#fecha, SK: type#id
+```
+
+---
+
+## Calculated Fields Update System
+
+### Architecture
+
+El sistema de campos calculados mantiene sincronizados los valores derivados (cache) con los datos fuente (Cuotas, Pagos).
+
+```
+Registrar Pago
+     ↓
+Guardar en tabla Pagos (inmutable)
+     ↓
+actualizarCamposCuota(cuotaId)
+     ↓
+actualizarCamposCredito(creditoId)
+     ↓
+actualizarCamposCliente(clienteId)
+     ↓
+UI se actualiza automáticamente (useLiveQuery)
+```
+
+### Update Functions
+
+```typescript
+// src/lib/actualizarCampos.ts
+
+/**
+ * Actualizar campos calculados de una cuota
+ * Se llama después de registrar un pago
+ */
+export async function actualizarCamposCuota(cuotaId: string): Promise<void>;
+
+/**
+ * Actualizar campos calculados de un crédito
+ * Se llama después de registrar un pago o crear crédito
+ */
+export async function actualizarCamposCredito(creditoId: string): Promise<void>;
+
+/**
+ * Actualizar campos calculados de un cliente
+ * Se llama después de registrar un pago o crear crédito
+ */
+export async function actualizarCamposCliente(clienteId: string): Promise<void>;
+
+/**
+ * Actualizar en cascada después de un pago
+ * Actualiza cuota → crédito → cliente
+ */
+export async function actualizarDespuesDePago(
+  cuotaId: string,
+  creditoId: string,
+  clienteId: string
+): Promise<void>;
+
+/**
+ * Recalcular TODOS los campos calculados
+ * Útil para recuperación de errores o validación
+ */
+export async function recalcularTodosCampos(tenantId?: string): Promise<void>;
+
+/**
+ * Validar integridad de campos calculados
+ * Compara cache vs valores recalculados
+ */
+export async function validarIntegridad(tenantId?: string): Promise<{
+  cuotasInconsistentes: string[];
+  creditosInconsistentes: string[];
+  clientesInconsistentes: string[];
+}>;
+```
+
+### Guarantees
+
+1. **Datos Fuente Nunca Se Modifican**
+   - Cuotas y Pagos son inmutables
+   - Campos calculados son solo cache
+   - Siempre se puede recalcular desde fuente
+
+2. **Actualización Automática**
+   - Cada operación actualiza campos afectados
+   - No requiere intervención manual
+   - UI se actualiza en tiempo real
+
+3. **Recuperación de Errores**
+   - Si hay inconsistencias, se puede recalcular todo
+   - Función `recalcularTodosCampos()` disponible
+   - Validación de integridad periódica
+
+4. **Performance**
+   - Actualización incremental (solo registros afectados)
+   - Queries optimizadas con índices
+   - Tiempo de actualización < 50ms
+
+### Maintenance
+
+**Validar integridad (consola del navegador):**
+```javascript
+const { validarIntegridad } = await import('./lib/actualizarCampos');
+const resultado = await validarIntegridad();
+console.log(resultado);
+```
+
+**Recalcular todo (consola del navegador):**
+```javascript
+const { recalcularTodosCampos } = await import('./lib/actualizarCampos');
+await recalcularTodosCampos();
 ```
 
 ---

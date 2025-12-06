@@ -44,8 +44,9 @@ CrediSync360 V2 es una aplicación web progresiva (PWA) diseñada para cobradore
 - **AppSync:** Servicio de AWS para APIs GraphQL
 - **DynamoDB:** Base de datos NoSQL de AWS
 - **Cognito:** Servicio de autenticación de AWS
-- **Calculated Property:** Valor derivado calculado en tiempo real (no almacenado)
+- **Calculated Field (Campo Calculado):** Valor derivado que se almacena como cache para optimizar rendimiento, pero que puede recalcularse desde los datos fuente en cualquier momento
 - **Immutable Data:** Datos que nunca se modifican, solo se agregan nuevos registros
+- **Data Optimization:** Técnica de agregar campos calculados a las tablas para mejorar rendimiento en escenarios de alto volumen
 
 ---
 
