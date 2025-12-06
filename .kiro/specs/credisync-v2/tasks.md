@@ -286,8 +286,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 
 ## Fase 7: Otorgar Créditos
 
-### [ ] 17. Implementar hook useCredito
-- [ ] 17.1 Crear `src/hooks/useCredito.ts`
+### [x] 17. Implementar hook useCredito
+- [x] 17.1 Crear `src/hooks/useCredito.ts`
   - Cargar productos de crédito disponibles
   - Función para calcular interés y cuotas
   - Función para generar fechas de cuotas
@@ -310,8 +310,8 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
   - Verificar que cuota = total / número de cuotas
   - _Requirements: 5.4_
 
-### [ ] 18. Implementar componente OtorgarCredito
-- [ ] 18.1 Crear `src/components/creditos/OtorgarCredito.tsx`
+### [x] 18. Implementar componente OtorgarCredito
+- [x] 18.1 Crear `src/components/creditos/OtorgarCredito.tsx`
   - Selector de producto de crédito
   - Input de monto con validación (min/max)
   - Date picker para fecha de desembolso (default: hoy)

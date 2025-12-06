@@ -7,18 +7,19 @@
  * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.9, 4.10
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { calcularEstadoCliente, calcularEstadoCredito } from '../../lib/calculos';
+import { OtorgarCredito } from '../creditos/OtorgarCredito';
 
 interface ClienteDetailProps {
   clienteId: string;
   onClose: () => void;
-  onOtorgarCredito?: () => void;
 }
 
-export function ClienteDetail({ clienteId, onClose, onOtorgarCredito }: ClienteDetailProps) {
+export function ClienteDetail({ clienteId, onClose }: ClienteDetailProps) {
+  const [mostrarOtorgarCredito, setMostrarOtorgarCredito] = useState(false);
   // Cargar cliente
   const cliente = useLiveQuery(
     () => db.clientes.get(clienteId),
@@ -143,14 +144,12 @@ export function ClienteDetail({ clienteId, onClose, onOtorgarCredito }: ClienteD
             ← Volver
           </button>
 
-          {estadoCliente.creditosActivos > 0 && (
-            <button
-              onClick={onOtorgarCredito}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-            >
-              + Otorgar Crédito
-            </button>
-          )}
+          <button
+            onClick={() => setMostrarOtorgarCredito(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+          >
+            + Otorgar Crédito
+          </button>
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{cliente.nombre}</h1>
@@ -329,6 +328,19 @@ export function ClienteDetail({ clienteId, onClose, onOtorgarCredito }: ClienteD
           </div>
         )}
       </div>
+
+      {/* Modal Otorgar Crédito */}
+      {mostrarOtorgarCredito && (
+        <OtorgarCredito
+          clienteId={clienteId}
+          clienteNombre={cliente.nombre}
+          onClose={() => setMostrarOtorgarCredito(false)}
+          onSuccess={() => {
+            setMostrarOtorgarCredito(false);
+            console.log('✅ Crédito otorgado exitosamente');
+          }}
+        />
+      )}
     </div>
   );
 }

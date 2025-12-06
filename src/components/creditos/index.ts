@@ -1,0 +1,1 @@
+export { OtorgarCredito } from './OtorgarCredito';

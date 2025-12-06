@@ -48,10 +48,6 @@ export function ClientesList() {
       <ClienteDetail
         clienteId={clienteSeleccionado}
         onClose={() => setClienteSeleccionado(null)}
-        onOtorgarCredito={() => {
-          // TODO: Implementar otorgar crédito
-          console.log('Otorgar crédito a:', clienteSeleccionado);
-        }}
       />
     );
   }
