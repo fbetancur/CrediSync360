@@ -42,10 +42,8 @@ export function useCredito(): UseCreditoReturn {
   // Cargar productos de crédito activos
   const productos = useLiveQuery(async () => {
     try {
-      return await db.productos
-        .where('activo')
-        .equals(1) // true = 1 en Dexie
-        .toArray();
+      const allProductos = await db.productos.toArray();
+      return allProductos.filter((p) => p.activo === true);
     } catch (err) {
       console.error('[useCredito] Error loading productos:', err);
       setError(err as Error);

@@ -339,24 +339,59 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 
 ---
 
-## Fase 8: Cierre de Caja
+## Fase 8: Balance y Caja
 
-### [ ] 20. Implementar componente CierreCaja
-- [ ] 20.1 Crear `src/components/cierre/CierreCaja.tsx`
-  - Mostrar fecha actual
-  - Calcular y mostrar total cobrado hoy
-  - Calcular y mostrar cuotas cobradas/total
-  - Calcular y mostrar clientes visitados
-  - Input para efectivo en mano con validación
-  - Warning si efectivo no coincide con total
-  - Textarea para observaciones (max 1000 chars)
-  - Botón "Generar Reporte" (PDF)
-  - Botón "Confirmar Cierre"
+### [x] 20. Implementar sistema de Balance/Caja
+- [x] 20.1 Actualizar tipos en `src/types/index.ts`
+  - Actualizado CierreCaja con todos los campos (cajaBase, totalCobrado, totalCreditosOtorgados, totalEntradas, totalGastos, totalCaja)
+  - Creado tipo MovimientoCaja para entradas y gastos
+  - Creado tipo EstadoCaja para estado en tiempo real
+  - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+- [x] 20.2 Actualizar schema de base de datos en `src/lib/db.ts`
+  - Agregada tabla movimientos para entradas y gastos
+  - Actualizado schema a versión 2
+  - Agregados índices compuestos para queries eficientes
+  - _Requirements: 6.1, 6.2_
+
+- [x] 20.3 Crear hook `src/hooks/useBalance.ts`
+  - Calcula estado de caja en tiempo real
+  - Funciones: agregarMovimiento(), cerrarCaja()
+  - Reactivo con useLiveQuery
+  - Fórmula: Total = Base + Cobrado - Créditos + Entradas - Gastos
+  - _Requirements: 6.2, 6.3, 6.4, 6.5, 6.6_
+
+- [x] 20.4 Crear componente `src/components/balance/Balance.tsx`
+  - Muestra estado CAJA ABIERTA/CERRADA
+  - Display de Caja Base
+  - Cobrado vs Créditos en dos columnas
+  - Tabla de Entradas/Inversión con botón "Agregar"
+  - Tabla de Gastos/Salidas con botón "Agregar gasto"
+  - Total Caja (verde si positivo, rojo si negativo)
+  - Botón "Cerrar Caja" (solo cuando abierta)
+  - Botón "Recargar"
+  - Desglose detallado del cálculo
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
 
-- [ ]* 20.2 Escribir tests de componente para CierreCaja
+- [x] 20.5 Integración en navegación
+  - Cambiado tab "Cierre" a "💰 Caja"
+  - Actualizado App.tsx con nuevo componente
+  - _Requirements: 6.1_
+
+- [x] 20.6 Correcciones Mobile-First y Balance
+  - Header fijo con sticky top-0 z-50
+  - Eliminado scroll horizontal (overflow-x-hidden)
+  - Caja base dinámica (total del día anterior)
+  - Funcionalidad eliminar movimientos antes del cierre
+  - Botones 🗑️ en tablas (solo cuando ABIERTA)
+  - Tablas responsive sin scroll horizontal
+  - Optimización mobile: padding reducido, fuentes más pequeñas
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 9.1, 9.2_
+
+- [ ]* 20.7 Escribir tests de componente para Balance
   - Test de cálculos de totales
-  - Test de validación de efectivo
+  - Test de agregar entradas y gastos
+  - Test de eliminar movimientos
   - Test de confirmación de cierre
   - _Requirements: 6.2, 6.3, 6.4, 6.5_
 
@@ -503,14 +538,14 @@ Este documento contiene la lista de tareas para implementar CrediSync360 V2. Cad
 **Tareas opcionales (*):** 19 sub-tareas de testing
 
 **Distribución por fase:**
-- Fase 1 (Setup): 2 tareas
-- Fase 2 (Base de datos): 3 tareas
-- Fase 3 (Sincronización): 1 tarea
-- Fase 4 (Ruta del día): 3 tareas
-- Fase 5 (Registro de pagos): 3 tareas
-- Fase 6 (Gestión de clientes): 4 tareas
-- Fase 7 (Otorgar créditos): 3 tareas
-- Fase 8 (Cierre de caja): 1 tarea
+- Fase 1 (Setup): 2 tareas ✅
+- Fase 2 (Base de datos): 3 tareas ✅
+- Fase 3 (Sincronización): 1 tarea ✅
+- Fase 4 (Ruta del día): 3 tareas ✅
+- Fase 5 (Registro de pagos): 3 tareas ✅
+- Fase 6 (Gestión de clientes): 4 tareas ✅
+- Fase 7 (Otorgar créditos): 3 tareas ✅
+- Fase 8 (Balance y caja): 1 tarea ✅
 - Fase 9 (Autenticación): 2 tareas
 - Fase 10 (PWA): 3 tareas
 - Fase 11 (Testing y Deploy): 3 tareas

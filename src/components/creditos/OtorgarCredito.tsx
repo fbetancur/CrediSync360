@@ -66,8 +66,12 @@ export function OtorgarCredito({
     }
 
     try {
+      // Parsear fecha correctamente para evitar problemas de timezone
+      const [year, month, day] = fechaPrimeraCuota.split('-').map(Number);
+      const fechaInicio = new Date(year, month - 1, day);
+      
       const fechas = generarFechasCuotas(
-        new Date(fechaPrimeraCuota),
+        fechaInicio,
         producto.numeroCuotas,
         producto.frecuencia,
         producto.excluirDomingos
@@ -102,7 +106,9 @@ export function OtorgarCredito({
 
   // Formatear fecha
   const formatFecha = (fecha: string) => {
-    const date = new Date(fecha);
+    // Parsear fecha correctamente para evitar problemas de timezone
+    const [year, month, day] = fecha.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return date.toLocaleDateString('es-CO', {
       weekday: 'short',
       year: 'numeric',
@@ -153,12 +159,16 @@ export function OtorgarCredito({
     setError(null);
 
     try {
+      // Parsear fechas correctamente para evitar problemas de timezone
+      const [yearDesembolso, monthDesembolso, dayDesembolso] = fechaDesembolso.split('-').map(Number);
+      const [yearPrimera, monthPrimera, dayPrimera] = fechaPrimeraCuota.split('-').map(Number);
+      
       await otorgarCredito({
         clienteId,
         productoId: productoSeleccionado,
         montoOriginal: parseFloat(monto),
-        fechaDesembolso: new Date(fechaDesembolso),
-        fechaPrimeraCuota: new Date(fechaPrimeraCuota),
+        fechaDesembolso: new Date(yearDesembolso, monthDesembolso - 1, dayDesembolso),
+        fechaPrimeraCuota: new Date(yearPrimera, monthPrimera - 1, dayPrimera),
       });
 
       console.log('✅ Crédito otorgado exitosamente');

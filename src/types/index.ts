@@ -113,15 +113,42 @@ export interface CierreCaja {
   cobradorId: string;
   fecha: string; // YYYY-MM-DD
   // Datos del cierre
+  cajaBase: number;
   totalCobrado: number;
+  totalCreditosOtorgados: number;
+  totalEntradas: number;
+  totalGastos: number;
+  totalCaja: number;
   cuotasCobradas: number;
   cuotasTotales: number;
   clientesVisitados: number;
-  efectivoEnMano: number;
   observaciones?: string;
   // Metadata
   createdAt: string;
   createdBy: string;
+}
+
+export interface MovimientoCaja {
+  id: string;
+  tenantId: string;
+  cobradorId: string;
+  fecha: string; // YYYY-MM-DD
+  tipo: 'ENTRADA' | 'GASTO';
+  detalle: string;
+  valor: number;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface EstadoCaja {
+  fecha: string;
+  estado: 'ABIERTA' | 'CERRADA';
+  cajaBase: number;
+  totalCobrado: number;
+  totalCreditosOtorgados: number;
+  totalEntradas: number;
+  totalGastos: number;
+  totalCaja: number;
 }
 
 // ============================================================================

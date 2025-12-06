@@ -27,13 +27,14 @@ export class CrediSyncDB extends Dexie {
   cuotas!: Table<Cuota, string>;
   pagos!: Table<Pago, string>;
   cierres!: Table<CierreCaja, string>;
+  movimientos!: Table<import('../types').MovimientoCaja, string>;
   syncQueue!: Table<SyncQueueItem, number>;
 
   constructor() {
     super('credisync-v2');
 
     // Definir schema con índices
-    this.version(1).stores({
+    this.version(2).stores({
       // Clientes
       // Índices: id (primary), tenantId, documento, nombre, [tenantId+nombre]
       clientes: 'id, tenantId, documento, nombre, [tenantId+nombre]',
@@ -62,6 +63,10 @@ export class CrediSyncDB extends Dexie {
       // Índices: id (primary), tenantId, cobradorId, fecha
       cierres: 'id, tenantId, cobradorId, fecha, [tenantId+cobradorId+fecha]',
 
+      // Movimientos de Caja (Entradas y Gastos)
+      // Índices: id (primary), tenantId, cobradorId, fecha, tipo
+      movimientos: 'id, tenantId, cobradorId, fecha, tipo, [tenantId+cobradorId+fecha]',
+
       // Cola de Sincronización
       // Índices: id (auto-increment primary), status, type, timestamp
       syncQueue: '++id, status, type, timestamp, [status+timestamp]',
@@ -79,6 +84,7 @@ export class CrediSyncDB extends Dexie {
       this.cuotas.clear(),
       this.pagos.clear(),
       this.cierres.clear(),
+      this.movimientos.clear(),
       this.syncQueue.clear(),
     ]);
   }
@@ -94,6 +100,7 @@ export class CrediSyncDB extends Dexie {
       this.cuotas.where('tenantId').equals(tenantId).delete(),
       this.pagos.where('tenantId').equals(tenantId).delete(),
       this.cierres.where('tenantId').equals(tenantId).delete(),
+      this.movimientos.where('tenantId').equals(tenantId).delete(),
     ]);
   }
 

@@ -27,20 +27,57 @@ export async function seedDatabase() {
   const userId = 'test-user';
   const hoy = new Date();
 
-  // 1. Crear producto de crédito
-  const producto: ProductoCredito = {
-    id: 'prod-1',
-    tenantId,
-    nombre: 'Crédito Diario',
-    interesPorcentaje: 0,
-    numeroCuotas: 10,
-    frecuencia: 'DIARIO',
-    excluirDomingos: true,
-    activo: true,
-    createdAt: new Date().toISOString(),
-    createdBy: userId,
-  };
-  await db.productos.add(producto);
+  // 1. Crear productos de crédito
+  const productos: ProductoCredito[] = [
+    {
+      id: 'prod-1',
+      tenantId,
+      nombre: 'Crédito Diario',
+      interesPorcentaje: 20,
+      numeroCuotas: 20,
+      frecuencia: 'DIARIO',
+      excluirDomingos: true,
+      montoMinimo: 50000,
+      montoMaximo: 500000,
+      activo: true,
+      createdAt: new Date().toISOString(),
+      createdBy: userId,
+    },
+    {
+      id: 'prod-2',
+      tenantId,
+      nombre: 'Crédito Semanal',
+      interesPorcentaje: 45,
+      numeroCuotas: 13,
+      frecuencia: 'SEMANAL',
+      excluirDomingos: false,
+      montoMinimo: 100000,
+      montoMaximo: 1000000,
+      activo: true,
+      createdAt: new Date().toISOString(),
+      createdBy: userId,
+    },
+    {
+      id: 'prod-3',
+      tenantId,
+      nombre: 'Crédito Quincenal',
+      interesPorcentaje: 30,
+      numeroCuotas: 6,
+      frecuencia: 'QUINCENAL',
+      excluirDomingos: false,
+      montoMinimo: 200000,
+      montoMaximo: 2000000,
+      activo: true,
+      createdAt: new Date().toISOString(),
+      createdBy: userId,
+    },
+  ];
+  
+  for (const producto of productos) {
+    await db.productos.add(producto);
+  }
+  
+  const producto = productos[0]; // Usar el primer producto para los créditos de prueba
 
   // 2. Crear clientes de prueba
   const clientes: Cliente[] = [
