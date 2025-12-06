@@ -42,7 +42,7 @@ const schema = a.schema({
       diasAtrasoMax: a.integer().required(),
       estado: a.enum(["SIN_CREDITOS", "AL_DIA", "MORA"]),
       score: a.enum(["CONFIABLE", "REGULAR", "RIESGOSO"]),
-      ultimaActualizacion: a.datetime().required(),
+      ultimaActualizacion: a.string().required(),
       // Relaciones
       ruta: a.belongsTo("Ruta", "rutaId"),
       creditos: a.hasMany("Credito", "clienteId"),
@@ -93,7 +93,7 @@ const schema = a.schema({
       saldoPendiente: a.float().required(),
       cuotasPagadas: a.integer().required(),
       diasAtraso: a.integer().required(),
-      ultimaActualizacion: a.datetime().required(),
+      ultimaActualizacion: a.string().required(),
       // Relaciones
       ruta: a.belongsTo("Ruta", "rutaId"),
       cliente: a.belongsTo("Cliente", "clienteId"),
@@ -121,7 +121,7 @@ const schema = a.schema({
       saldoPendiente: a.float().required(),
       estado: a.enum(["PENDIENTE", "PARCIAL", "PAGADA"]),
       diasAtraso: a.integer().required(),
-      ultimaActualizacion: a.datetime().required(),
+      ultimaActualizacion: a.string().required(),
       // Relaciones
       ruta: a.belongsTo("Ruta", "rutaId"),
       credito: a.belongsTo("Credito", "creditoId"),
