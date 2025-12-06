@@ -64,18 +64,24 @@ export function useSyncStatus(): UseSyncStatusReturn {
     }
 
     if (isSyncing) {
+      console.log('[useSyncStatus] Ya hay una sincronización en curso');
       return;
     }
 
     setIsSyncing(true);
     try {
+      console.log('[useSyncStatus] Iniciando sincronización forzada...');
       await forceSyncNow();
       console.log('[useSyncStatus] Sincronización forzada completada');
     } catch (error) {
       console.error('[useSyncStatus] Error en sincronización forzada:', error);
-      alert('❌ Error al sincronizar. Intenta de nuevo.');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      alert(`❌ Error al sincronizar: ${errorMessage}`);
     } finally {
-      setIsSyncing(false);
+      // Usar setTimeout para asegurar que el estado se actualiza después del render
+      setTimeout(() => {
+        setIsSyncing(false);
+      }, 100);
     }
   };
 

@@ -5,12 +5,23 @@
  * Muestra estadísticas en tiempo real y permite forzar sincronización.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSyncStatus } from '../../hooks/useSyncStatus';
+import { getFailedItems, retryFailedItems } from '../../lib/sync';
+import type { SyncQueueItem } from '../../types';
 
 export function SyncIndicator() {
   const { status, forceSync, hasUnsyncedData, allSynced } = useSyncStatus();
   const [showDetails, setShowDetails] = useState(false);
+  const [failedItems, setFailedItems] = useState<SyncQueueItem[]>([]);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  // Cargar items fallidos cuando se abre el modal
+  useEffect(() => {
+    if (showDetails && status.failed > 0) {
+      getFailedItems().then(setFailedItems).catch(console.error);
+    }
+  }, [showDetails, status.failed]);
 
   // Determinar color y mensaje según estado
   const getStatusColor = () => {
@@ -118,33 +129,87 @@ export function SyncIndicator() {
 
               {status.failed > 0 && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
-                  <p className="text-sm text-red-700 font-medium">
-                    ❌ Algunos registros fallaron al sincronizar. Intenta forzar la sincronización.
+                  <p className="text-sm text-red-700 font-medium mb-2">
+                    ❌ {status.failed} registro(s) fallaron al sincronizar
                   </p>
+                  {failedItems.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {failedItems.slice(0, 3).map((item, index) => (
+                        <div key={item.id || index} className="text-xs text-red-600 bg-white p-2 rounded">
+                          <div className="font-medium">{item.type}</div>
+                          <div className="text-red-500 truncate">{item.lastError || 'Error desconocido'}</div>
+                        </div>
+                      ))}
+                      {failedItems.length > 3 && (
+                        <div className="text-xs text-red-600">
+                          ... y {failedItems.length - 3} más
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Botón de sincronización forzada */}
-              {status.isOnline && hasUnsyncedData && (
-                <button
-                  onClick={async () => {
-                    await forceSync();
-                  }}
-                  disabled={status.isSyncing}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {status.isSyncing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Sincronizando...
-                    </>
-                  ) : (
-                    <>
-                      🔄 Forzar Sincronización Ahora
-                    </>
-                  )}
-                </button>
-              )}
+              {/* Botones de acción */}
+              <div className="space-y-2">
+                {/* Botón de sincronización forzada */}
+                {status.isOnline && hasUnsyncedData && status.failed === 0 && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await forceSync();
+                      } catch (error) {
+                        console.error('[SyncIndicator] Error en forceSync:', error);
+                      }
+                    }}
+                    disabled={status.isSyncing}
+                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {status.isSyncing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Sincronizando...
+                      </>
+                    ) : (
+                      <>
+                        🔄 Forzar Sincronización Ahora
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* Botón para reintentar items fallidos */}
+                {status.failed > 0 && (
+                  <button
+                    onClick={async () => {
+                      setIsRetrying(true);
+                      try {
+                        const count = await retryFailedItems();
+                        alert(`✅ Se reintentarán ${count} registro(s)`);
+                        setShowDetails(false);
+                      } catch (error) {
+                        console.error('[SyncIndicator] Error al reintentar:', error);
+                        alert('❌ Error al reintentar. Revisa la consola.');
+                      } finally {
+                        setIsRetrying(false);
+                      }
+                    }}
+                    disabled={isRetrying || !status.isOnline}
+                    className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isRetrying ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Reintentando...
+                      </>
+                    ) : (
+                      <>
+                        🔄 Reintentar Items Fallidos
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Footer */}

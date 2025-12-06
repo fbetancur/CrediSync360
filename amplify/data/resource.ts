@@ -24,7 +24,7 @@ const schema = a.schema({
       creditos: a.hasMany("Credito", "clienteId"),
     })
     .authorization((allow) => [
-      allow.authenticated().to(["read", "create", "update"]),
+      allow.publicApiKey(),
     ]),
 
   // Modelo: Producto de Crédito
@@ -41,7 +41,7 @@ const schema = a.schema({
       activo: a.boolean().required(),
     })
     .authorization((allow) => [
-      allow.authenticated(),
+      allow.publicApiKey(),
     ]),
 
   // Modelo: Crédito
@@ -70,7 +70,7 @@ const schema = a.schema({
       pagos: a.hasMany("Pago", "creditoId"),
     })
     .authorization((allow) => [
-      allow.authenticated().to(["read", "create"]),
+      allow.publicApiKey(),
     ]),
 
   // Modelo: Cuota
@@ -88,7 +88,7 @@ const schema = a.schema({
       pagos: a.hasMany("Pago", "cuotaId"),
     })
     .authorization((allow) => [
-      allow.authenticated().to(["read", "create"]),
+      allow.publicApiKey(),
     ]),
 
   // Modelo: Pago (Inmutable)
@@ -112,7 +112,7 @@ const schema = a.schema({
       cuota: a.belongsTo("Cuota", "cuotaId"),
     })
     .authorization((allow) => [
-      allow.authenticated().to(["read", "create"]),
+      allow.publicApiKey(),
       // Los pagos son inmutables - no se pueden actualizar ni eliminar
     ]),
 
@@ -131,7 +131,7 @@ const schema = a.schema({
       observaciones: a.string(),
     })
     .authorization((allow) => [
-      allow.authenticated().to(["read", "create"]),
+      allow.publicApiKey(),
     ]),
 });
 
@@ -140,6 +140,6 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "userPool",
+    defaultAuthorizationMode: "apiKey",
   },
 });

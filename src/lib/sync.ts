@@ -68,7 +68,7 @@ export async function addToSyncQueue(
  * 
  * Validates: Requirements 7.3, 7.4, 7.5
  */
-async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
+async function processSyncItem(item: SyncQueueItem): Promise<{ success: boolean; error?: string }> {
   try {
     console.log(`[Sync] Processing: ${item.type}`, item.data);
 
@@ -96,15 +96,18 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
         break;
 
       default:
-        console.error(`[Sync] Unknown operation type: ${item.type}`);
-        return false;
+        const unknownError = `Unknown operation type: ${item.type}`;
+        console.error(`[Sync] ${unknownError}`);
+        return { success: false, error: unknownError };
     }
 
     console.log(`[Sync] Success: ${item.type}`);
-    return true;
+    return { success: true };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Sync] Error processing ${item.type}:`, error);
-    return false;
+    console.error(`[Sync] Error details:`, JSON.stringify(error, null, 2));
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -170,9 +173,9 @@ async function processSyncQueue(): Promise<void> {
       }
 
       // Intentar sincronizar
-      const success = await processSyncItem(item);
+      const result = await processSyncItem(item);
 
-      if (success) {
+      if (result.success) {
         // Marcar como sincronizado
         await db.syncQueue.update(item.id!, {
           status: 'SYNCED',
@@ -187,20 +190,22 @@ async function processSyncQueue(): Promise<void> {
           await db.syncQueue.update(item.id!, {
             status: 'FAILED',
             retries: newRetries,
-            lastError: 'Max retries exceeded',
+            lastError: result.error || 'Max retries exceeded',
           });
 
           console.error(`[Sync] Failed after ${MAX_RETRIES} retries: ${item.type}`);
+          console.error(`[Sync] Last error: ${result.error}`);
           
           // TODO: Notificar al usuario
         } else {
           // Incrementar contador de reintentos
           await db.syncQueue.update(item.id!, {
             retries: newRetries,
-            lastError: 'Sync failed, will retry',
+            lastError: result.error || 'Sync failed, will retry',
           });
 
           console.log(`[Sync] Retry ${newRetries}/${MAX_RETRIES}: ${item.type}`);
+          console.log(`[Sync] Error: ${result.error}`);
         }
       }
     }
@@ -292,6 +297,42 @@ export async function getSyncStats(): Promise<{
 }
 
 /**
+ * Obtener items fallidos con detalles de error
+ * 
+ * @returns Array de items fallidos con sus errores
+ */
+export async function getFailedItems(): Promise<SyncQueueItem[]> {
+  return await db.syncQueue
+    .where('status')
+    .equals('FAILED')
+    .toArray();
+}
+
+/**
+ * Reintentar items fallidos (resetear a PENDING)
+ * 
+ * @returns Número de items reseteados
+ */
+export async function retryFailedItems(): Promise<number> {
+  const failedItems = await getFailedItems();
+  
+  for (const item of failedItems) {
+    await db.syncQueue.update(item.id!, {
+      status: 'PENDING',
+      retries: 0,
+      lastError: undefined,
+    });
+  }
+
+  console.log(`[Sync] Reset ${failedItems.length} failed items to retry`);
+  
+  // Forzar sincronización inmediata
+  await processSyncQueue();
+  
+  return failedItems.length;
+}
+
+/**
  * Limpiar items sincronizados antiguos (más de 7 días)
  * 
  * @returns Número de items eliminados
@@ -343,6 +384,8 @@ export default {
   stopSync,
   forceSyncNow,
   getSyncStats,
+  getFailedItems,
+  retryFailedItems,
   cleanupSyncedItems,
   resolveConflict,
 };
