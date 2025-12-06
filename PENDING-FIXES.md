@@ -10,6 +10,33 @@
 7. ✅ Agregado rutaId en useBalance.ts (movimiento y cierre)
 8. ✅ Agregado rutaId en useCredito.ts (crédito y cuotas)
 9. ✅ Agregado rutaId en calculos.test.ts
+10. ✅ Optimizaciones críticas implementadas (Sesión 16)
+11. ✅ Inputs numéricos en móvil (Sesión 16)
+12. ✅ Schema corregido: ultimaActualizacion como string (Sesión 16)
+
+## ⚠️ EN PROGRESO:
+
+### 1. PROBLEMA DE SINCRONIZACIÓN
+**Estado:** Esperando deploy en AWS
+
+**Problema:** Los datos aparecen en IndexedDB (local) pero NO en AWS Amplify Data Manager
+
+**Causa:** Schema de Amplify tenía campos `ultimaActualizacion` como `a.datetime()` pero el código los guarda como strings ISO
+
+**Solución aplicada:**
+- ✅ Corregido schema: cambió `a.datetime()` por `a.string()` en 3 campos
+- ✅ Commit realizado: "fix: corregir tipo de campo ultimaActualizacion en schema de Amplify"
+- ✅ Push exitoso a GitHub
+- ⏳ Esperando deploy automático en AWS (5-10 minutos)
+
+**Próximos pasos:**
+1. Verificar deploy completado en AWS Amplify Console
+2. Forzar sincronización en la app
+3. Verificar datos en AWS Data Manager
+
+**Documentación:**
+- Ver: `VERIFICAR-DEPLOY.md` (guía paso a paso)
+- Ver: `INSTRUCCIONES-REDEPLOY.md` (troubleshooting completo)
 
 ## ⏳ PENDIENTE:
 
@@ -30,94 +57,24 @@ rutaId: 'ruta-default',
 cobradorId: userId,
 ```
 
-### 2. OPTIMIZACIONES CRÍTICAS
-
-#### A. Optimizar useRuta.ts - Filtrar por cobrador
+### 2. Corregir seedData.ts
+Agregar a TODOS los clientes (5 lugares):
 ```typescript
-// ANTES (carga TODO)
-const cuotas = useLiveQuery(async () => {
-  return await db.cuotas
-    .where('fechaProgramada')
-    .belowOrEqual(hoy)
-    .toArray();
-}, [hoy]);
-
-// DESPUÉS (solo del cobrador)
-const cuotas = useLiveQuery(async () => {
-  return await db.cuotas
-    .where('[tenantId+cobradorId+fechaProgramada]')
-    .between(
-      [TENANT_ID, COBRADOR_ID, '2000-01-01'],
-      [TENANT_ID, COBRADOR_ID, hoy]
-    )
-    .toArray();
-}, [hoy]);
+rutaId: 'ruta-default',
 ```
 
-#### B. Cambiar estadisticas() de useCallback a useMemo
+Agregar a TODOS los créditos:
 ```typescript
-// ANTES
-const estadisticas = useCallback(() => {
-  // cálculos...
-}, [pagos, cuotas, hoy]);
-
-// DESPUÉS
-const estadisticas = useMemo(() => {
-  // cálculos...
-  return { totalCobradoHoy, cuotasCobradas, cuotasPendientes };
-}, [pagos, cuotas, hoy]);
+rutaId: 'ruta-default',
 ```
 
-#### C. Usar campos calculados en procesarRuta
+Agregar a TODAS las cuotas:
 ```typescript
-// ANTES
-const estadoCuota = calcularEstadoCuota(cuota, pagosCuota);
-if (estadoCuota.estado === 'PAGADA') continue;
-
-// DESPUÉS
-if (cuota.estado === 'PAGADA') continue;
-clienteExistente.totalPendiente += cuota.saldoPendiente;
-clienteExistente.diasAtrasoMax = Math.max(
-  clienteExistente.diasAtrasoMax,
-  cuota.diasAtraso
-);
+rutaId: 'ruta-default',
+cobradorId: userId,
 ```
 
-#### D. Sync en batches paralelos
-```typescript
-// En sync.ts, línea 150
-const BATCH_SIZE = 10;
-for (let i = 0; i < pendingItems.length; i += BATCH_SIZE) {
-  const batch = pendingItems.slice(i, i + BATCH_SIZE);
-  const results = await Promise.allSettled(
-    batch.map(item => processSyncItem(item))
-  );
-  
-  // Procesar resultados...
-}
-```
-
-### 3. INPUTS NUMÉRICOS EN MÓVIL
-
-Agregar `inputMode="numeric"` a TODOS los inputs de valores:
-
-**Archivos a modificar:**
-- src/components/clientes/NuevoCliente.tsx (teléfono) ✅ YA TIENE
-- src/components/cobros/RegistrarPago.tsx (monto)
-- src/components/balance/Balance.tsx (valor entrada/gasto)
-- src/components/creditos/OtorgarCredito.tsx (monto)
-- src/components/productos/NuevoProducto.tsx (todos los números)
-
-```tsx
-<input
-  type="number"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  // ...
-/>
-```
-
-### 4. SERVICE WORKER PARA PWA
+### 3. SERVICE WORKER PARA PWA
 
 Instalar Vite PWA Plugin:
 ```bash
@@ -175,13 +132,9 @@ export default defineConfig({
 
 ## 🎯 PRIORIDAD DE IMPLEMENTACIÓN:
 
-1. **CRÍTICO** - Corregir seedData.ts (para que compile)
-2. **CRÍTICO** - Optimizar useRuta (filtrar por cobrador)
-3. **ALTA** - Inputs numéricos en móvil
-4. **ALTA** - Estadísticas con useMemo
-5. **MEDIA** - Usar campos calculados en procesarRuta
-6. **MEDIA** - Sync en batches paralelos
-7. **BAJA** - Service Worker (Fase 10)
+1. **CRÍTICO** - Verificar deploy en AWS y forzar sincronización
+2. **CRÍTICO** - Corregir seedData.ts (para que compile)
+3. **BAJA** - Service Worker (Fase 10)
 
 ## 📝 NOTAS:
 - Todos los `rutaId: 'ruta-default'` son temporales
