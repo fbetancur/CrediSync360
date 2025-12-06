@@ -14,6 +14,10 @@ import { db } from '../lib/db';
 import { calcularEstadoCuota } from '../lib/calculos';
 import type { ClienteRuta } from '../types';
 
+// TODO: Reemplazar con valores reales del contexto de autenticación
+const TENANT_ID = 'tenant-demo';
+const COBRADOR_ID = 'cobrador-demo';
+
 /**
  * Hook para gestionar la ruta del día
  * 
@@ -181,8 +185,10 @@ export function useRuta() {
       };
     }
 
-    // Filtrar pagos de hoy
-    const pagosHoy = pagos.filter((p) => p.fecha === hoy);
+    // Filtrar pagos de hoy SOLO del cobrador actual
+    const pagosHoy = pagos.filter(
+      (p) => p.fecha === hoy && p.cobradorId === COBRADOR_ID
+    );
     const totalCobradoHoy = pagosHoy.reduce((sum, p) => sum + p.monto, 0);
 
     // Contar cuotas cobradas (completamente pagadas)
