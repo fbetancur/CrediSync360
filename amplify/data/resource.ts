@@ -18,6 +18,10 @@ const schema = a.schema({
       // Relaciones
       clientes: a.hasMany("Cliente", "rutaId"),
       creditos: a.hasMany("Credito", "rutaId"),
+      cuotas: a.hasMany("Cuota", "rutaId"),
+      pagos: a.hasMany("Pago", "rutaId"),
+      cierres: a.hasMany("CierreCaja", "rutaId"),
+      movimientos: a.hasMany("MovimientoCaja", "rutaId"),
     })
     .authorization((allow) => [
       allow.publicApiKey(),
@@ -46,6 +50,8 @@ const schema = a.schema({
       // Relaciones
       ruta: a.belongsTo("Ruta", "rutaId"),
       creditos: a.hasMany("Credito", "clienteId"),
+      cuotas: a.hasMany("Cuota", "clienteId"),
+      pagos: a.hasMany("Pago", "clienteId"),
     })
     .authorization((allow) => [
       allow.publicApiKey(),
@@ -63,6 +69,8 @@ const schema = a.schema({
       montoMinimo: a.float(),
       montoMaximo: a.float(),
       activo: a.boolean().required(),
+      // Relaciones
+      creditos: a.hasMany("Credito", "productoId"),
     })
     .authorization((allow) => [
       allow.publicApiKey(),
@@ -97,6 +105,7 @@ const schema = a.schema({
       // Relaciones
       ruta: a.belongsTo("Ruta", "rutaId"),
       cliente: a.belongsTo("Cliente", "clienteId"),
+      producto: a.belongsTo("ProductoCredito", "productoId"),
       cuotas: a.hasMany("Cuota", "creditoId"),
       pagos: a.hasMany("Pago", "creditoId"),
     })
