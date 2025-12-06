@@ -26,6 +26,12 @@ function createCuota(id: string, numero: number, monto: number, fecha: string): 
     numero,
     fechaProgramada: fecha,
     montoProgramado: monto,
+    // Campos calculados inicializados
+    montoPagado: 0,
+    saldoPendiente: monto,
+    estado: 'PENDIENTE',
+    diasAtraso: 0,
+    ultimaActualizacion: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     createdBy: 'test-user',
   };

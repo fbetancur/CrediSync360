@@ -61,7 +61,11 @@ export function ClienteDetail({ clienteId, onClose }: ClienteDetailProps) {
 
       return {
         ...credito,
-        ...estado,
+        saldoPendiente: estado.saldoPendiente,
+        cuotasPagadas: estado.cuotasPagadas,
+        cuotasPendientes: estado.cuotasPendientes,
+        diasAtraso: estado.diasAtraso,
+        estadoCalculado: estado.estadoCalculado,
       };
     });
   }, [creditos, cuotas, pagos]);

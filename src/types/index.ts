@@ -206,7 +206,7 @@ export interface EstadoCreditoCalculado {
   cuotasPagadas: number;
   cuotasPendientes: number;
   diasAtraso: number;
-  estadoCalculado: EstadoCredito;
+  estadoCalculado: 'AL_DIA' | 'MORA' | 'CANCELADO';
 }
 
 export interface EstadoClienteCalculado {
