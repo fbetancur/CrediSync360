@@ -1,14 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RutaDelDia } from './components/cobros/RutaDelDia';
 import { ClientesList } from './components/clientes/ClientesList';
 import { Balance } from './components/balance/Balance';
 import { ProductosList } from './components/productos/ProductosList';
+import { SyncIndicator } from './components/sync/SyncIndicator';
+import { startSync, stopSync } from './lib/sync';
 import './lib/seedData'; // Importar para que esté disponible en window
 
 type Screen = 'cobros' | 'clientes' | 'balance' | 'productos';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('cobros');
+
+  // Iniciar sincronización automática al montar el componente
+  useEffect(() => {
+    console.log('[App] Iniciando sincronización automática...');
+    startSync();
+
+    // Limpiar al desmontar
+    return () => {
+      console.log('[App] Deteniendo sincronización...');
+      stopSync();
+    };
+  }, []);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">
@@ -65,6 +79,9 @@ function App() {
         {currentScreen === 'balance' && <Balance />}
         {currentScreen === 'productos' && <ProductosList />}
       </div>
+
+      {/* Indicador de sincronización flotante */}
+      <SyncIndicator />
     </div>
   );
 }
